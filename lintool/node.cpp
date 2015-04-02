@@ -192,6 +192,34 @@ Node::update(bool verify, bool save_params)
 }
 
 void
+Node::set_defaults()
+{
+    // check whether the node is already in the bootloader
+    if (Link::read_param(Generic::kParamOperationMode) == operation_magic::kBootloader) {
+        RAISE(ExDefaultFailed, "failed to request node reset");
+    }
+
+    try {
+        // request reset to default parameters
+        Link::write_param(Generic::kParamOperationMode, operation_magic::kSetDefaults);
+
+        if (address() == Master::kNodeAddress) {
+            // We just tried to reboot the master node, so it will need to be kicked off
+            // the bus again. Tell the link that we have effectively lost master mode so that
+            // it will re-claim the bus.
+            //
+            // Note that it's not necessary to re-enable master mode; it will happen automatically
+            // next time we try to talk.
+            //
+            Link::enable_master(false);
+            usleep(500000);             // 500ms seems to work OK
+        }
+    } catch (Exception &e) {
+        RAISE(ExDefaultFailed, "trying to set defaults: " << e.what());
+    }
+}
+
+void
 Node::enter_bootloader()
 {
     // check whether the node is already in the bootloader

@@ -22,7 +22,7 @@ invalid(uint8_t encoding, uint16_t value)
         if ((value >= 0) && (value <= 2)) {
             return false;
         }
-        if (value == 0x4d54) {
+        if (value == 0x4644) {
             return false;
         }
         if (value == 0x4f42) {
@@ -130,7 +130,7 @@ static const PROGMEM char _encoding_info_operation_magic_0[] = "Program";
 static const PROGMEM char _encoding_info_operation_magic_1[] = "Bootloader";
 static const PROGMEM char _encoding_info_operation_magic_2[] = "Test";
 static const PROGMEM char _encoding_info_operation_magic_3[] = "EnterBootloader";
-static const PROGMEM char _encoding_info_operation_magic_4[] = "EnterTest";
+static const PROGMEM char _encoding_info_operation_magic_4[] = "SetDefaults";
 static const PROGMEM char _encoding_name_service_error[] = "service_error";
 static const PROGMEM char _encoding_info_service_error_0[] = "FunctionNotSupported";
 static const PROGMEM char _encoding_info_service_error_1[] = "IncorrectLength";
@@ -385,7 +385,7 @@ info(uint8_t encoding, uint16_t value)
         if (value == 0x4f42) {
             return &_encoding_info_operation_magic_3[0];
         }
-        if (value == 0x4d54) {
+        if (value == 0x4644) {
             return &_encoding_info_operation_magic_4[0];
         }
     }
@@ -814,7 +814,7 @@ value(uint8_t encoding, const char *info, uint16_t &value)
             return true;
         }
         if (!strcmp(&_encoding_info_operation_magic_4[0], info)) {
-            value = 0x4d54;
+            value = 0x4644;
             return true;
         }
     }
@@ -1382,6 +1382,12 @@ param_exists(Parameter::Address address)
     if (address == kParamConfigTop) {
         return true;
     }
+    if (address == kParamDefaultBase) {
+        return true;
+    }
+    if (address == kParamDefaultTop) {
+        return true;
+    }
     return false;
 }
 
@@ -1421,6 +1427,8 @@ static const PROGMEM char _param_name_Synch[] = "Synch";
 static const PROGMEM char _param_name_Protocol[] = "Protocol";
 static const PROGMEM char _param_name_ConfigBase[] = "ConfigBase";
 static const PROGMEM char _param_name_ConfigTop[] = "ConfigTop";
+static const PROGMEM char _param_name_DefaultBase[] = "DefaultBase";
+static const PROGMEM char _param_name_DefaultTop[] = "DefaultTop";
 
 const PROGMEM char *
 param_name(Parameter::Address address)
@@ -1475,6 +1483,12 @@ param_name(Parameter::Address address)
     }
     if (address == kParamConfigTop) {
         return &_param_name_ConfigTop[0];
+    }
+    if (address == kParamDefaultBase) {
+        return &_param_name_DefaultBase[0];
+    }
+    if (address == kParamDefaultTop) {
+        return &_param_name_DefaultTop[0];
     }
     return nullptr;
 }

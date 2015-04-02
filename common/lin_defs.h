@@ -64,7 +64,7 @@ static const uint16_t kProgram = 0;
 static const uint16_t kBootloader = 1;
 static const uint16_t kTest = 2;
 static const uint16_t kEnterBootloader = 0x4f42;
-static const uint16_t kEnterTest = 0x4d54;
+static const uint16_t kSetDefaults = 0x4644;
 static const uint16_t kNumEncodings = 5;
 } // namespace operation_magic
 
@@ -444,6 +444,8 @@ static const uint16_t kParamSynch = 0x0204;
 static const uint16_t kParamProtocol = 0x0205;
 static const uint16_t kParamConfigBase = 0x0400;
 static const uint16_t kParamConfigTop = 0x04ef;
+static const uint16_t kParamDefaultBase = 0x0500;
+static const uint16_t kParamDefaultTop = 0x05ef;
 
 } // namespace Generic
 

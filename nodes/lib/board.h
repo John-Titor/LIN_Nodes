@@ -114,7 +114,10 @@ uint16_t freemem();
 
 /// Reboot into the bootloader
 ///
-void enter_bootloader(uint8_t nad, uint8_t function = 0);
+void enter_bootloader(uint8_t nad, uint8_t function = 0) __attribute__((noreturn));
+
+/// Reboot and reset parameters to default
+void reset_to_defaults() __attribute__((noreturn));
 
 /// Test whether the bootloader was requested
 ///
@@ -122,7 +125,7 @@ bool was_bootloader_requested();
 
 /// Reset
 ///
-void reset();
+void reset() __attribute__((noreturn));
 
 /// Set the LIN CS state
 ///

@@ -176,9 +176,13 @@ Parameter::set(uint16_t value) const
 {
     switch (address()) {
     case Generic::kParamOperationMode:
-        if (value == operation_magic::kEnterBootloader) {
+        switch (value) {
+        case operation_magic::kEnterBootloader:
             Board::enter_bootloader(RelaySlave::node_address(Board::get_mode()),
                                     board_function::kPowerV3);
+            
+        case operation_magic::kSetDefaults:
+            Board::reset_to_defaults();
         }
 
         break;
@@ -255,6 +259,10 @@ Parameter::get() const
 
     case Generic::kParamConfigBase ... Generic::kParamConfigTop:
         return eeprom_read_word((const uint16_t *)((address() - Generic::kParamConfigBase) * 2));
+
+    case Generic::kParamDefaultBase ... Generic::kParamDefaultTop:
+        return param_default(address() - Generic::kParamDefaultBase + Generic::kParamConfigBase);
+
     }
 
     return 0;

@@ -82,6 +82,31 @@ Param::get()
     RAISE(ExNotValid, name() << " is not valid at this time");
 }
 
+unsigned
+Param::get_default()
+{
+    if (!is_settable()) {
+        RAISE(ExNotValid, name() << " has no default");
+    }
+
+    if (Generic::param_exists(_address)) {
+        return Generic::param_default(_address);
+    }
+
+    switch (_function) {
+    case board_function::kMaster:
+        return Master::param_default(_address);
+
+    case board_function::kPowerV3:
+        return PowerV3::param_default(_address);
+
+    case board_function::kUnconfigured:
+        return Bootloader::param_default(_address);
+    }
+
+    return 0;
+}
+
 bool
 Param::exists() const
 {

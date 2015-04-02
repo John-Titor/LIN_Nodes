@@ -235,6 +235,18 @@ enter_bootloader(uint8_t nad, uint8_t function)
     reset();
 }
 
+void
+reset_to_defaults()
+{
+    // make sure the watchdog doesn't catch us while we're updating the EEPROM
+    wdt_reset();
+
+    // write magic to the EEPROM requesting parameter reset on reboot
+    eeprom_update_byte((uint8_t *)Board::kConfigOptions, Board::kOptResetConfig);
+
+    reset();
+}
+
 bool
 was_bootloader_requested()
 {

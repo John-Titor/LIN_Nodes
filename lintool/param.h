@@ -73,6 +73,10 @@ public:
     /// @return             The local copy of the value.
     unsigned            get();
 
+    /// @return             The default for the value (meaningless unless is_settable
+    ///                     returns true).
+    unsigned            get_default();
+
     /// @return             True if this parameter exists.
     bool                exists() const;
 

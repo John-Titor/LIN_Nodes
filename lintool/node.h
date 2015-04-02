@@ -44,6 +44,7 @@ public:
 
     EXCEPTION(Exception, ExScanFailed);
     EXCEPTION(Exception, ExUpdateFailed);
+    EXCEPTION(Exception, ExDefaultFailed);
 
     static void     scan(unsigned address = kNoNode);
     static bool     exists(unsigned address);
@@ -58,6 +59,7 @@ public:
     ParamSet        &params() { return _params; }
 
     void            update(bool verify, bool save_params);
+    void            set_defaults();
 
 private:
     static List     _list;

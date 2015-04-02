@@ -152,10 +152,15 @@ void
 load_params(int argc, char *argv[])
 {
     unsigned node = Node::kNoNode;
+    bool defaults = false;
     int ch;
 
-    while ((ch = getopt(argc, argv, "n:")) != -1) {
+    while ((ch = getopt(argc, argv, "dn:")) != -1) {
         switch (ch) {
+        case 'd':
+            defaults = true;
+            break;
+
         case 'n':
             node = strtoul(optarg, nullptr, 0);
             break;
@@ -170,6 +175,13 @@ load_params(int argc, char *argv[])
     argv += optind;
 
     Node::scan(node);
+
+    if (defaults) {
+        for (auto n : Node::nodes()) {
+            n->set_defaults();
+        }
+        return;
+    }
 
     if (Node::exists(Bootloader::kNodeAddress) && (node == Node::kNoNode)) {
         errx(1, "ERROR: cannot load all parameters, there is a node that needs recovery");
@@ -230,6 +242,7 @@ edit_param(int argc, char *argv[])
     unsigned node = Node::kNoNode;
     bool show_readonly = false;
     bool want_info = false;
+    bool set_default = false;
     int ch;
 
     while ((ch = getopt(argc, argv, "ain:")) != -1) {
@@ -260,7 +273,11 @@ edit_param(int argc, char *argv[])
 
     switch (argc) {
     case 2:
-        newvalue = argv[1];
+        if (!strcmp(argv[1], "-d")) {
+            set_default = true;
+        } else {
+            newvalue = argv[1];
+        }
 
     // FALLTHROUGH
     case 1:
@@ -312,11 +329,14 @@ edit_param(int argc, char *argv[])
             }
 
             if (want_info && param->is_settable()) {
+                auto defval = param->get_default();
+
                 for (uint16_t value = 0; value < 0xffff; value++) {
                     auto info = Encoding::info(encoding, value);
 
                     if (info != nullptr) {
-                        printf("        %.5u / 0x%04x / %s\n", value, value, info);
+                        printf("        %.5u / 0x%04x / %s%s\n", value, value, info,
+                            (value == defval) ? " (default)" : "");
                     }
                 }
             }
@@ -330,12 +350,16 @@ edit_param(int argc, char *argv[])
 
         uint16_t value;
 
-        if (!Encoding::value(encoding, newvalue, value)) {
-            char *cp;
-            value = strtoul(newvalue, &cp, 0);
+        if (set_default) {
+            value = param->get_default();
+        } else {
+            if (!Encoding::value(encoding, newvalue, value)) {
+                char *cp;
+                value = strtoul(newvalue, &cp, 0);
 
-            if (*cp != '\0') {
-                errx(1, "bad parameter value '%s'", newvalue);
+                if (*cp != '\0') {
+                    errx(1, "bad parameter value '%s'", newvalue);
+                }
             }
         }
 
@@ -419,7 +443,7 @@ struct {
 } commands[] = {
     {
         "status",
-        "lintool status\n"
+        "lintool status [-q]\n"
         "    Print link status.\n",
         status
     },
@@ -451,17 +475,22 @@ struct {
     },
     {
         "load_params",
-        "lintool [-l] load_params [-n <node>] [<file>]\n"
-        "    Load parameters from file (or stdin if <file> not specified).\n",
+        "lintool [-l] load_params [-n <node>] [-d|<file>]\n"
+        "    Load node parameters.\n"
+        "        -d    If specified, node parameters will be reset to defaults.\n"
+        "    If neither -d nor <file> are specified, parameters will be read from stdin.\n"
+        "    Data should be in the same format as emitted by dump_params. Nodes not defined\n"
+        "    in the data will not be updated.\n",
         load_params
     },
     {
         "param",
-        "lintool [-l] param -n <node> [-a][-i] [<param_name> [<value>]]\n"
+        "lintool [-l] param -n <node> [-a][-i] [<param_name> [-d|<value>]]\n"
         "    Read or write or more parameters from <node>.\n"
         "        -a    When printing all node parameters, include read-only parameters.\n"
         "        -i    When printing a parameter that accepts named values, also print\n"
-        "              a list of the allowed named values.\n"
+        "              a list of the allowed named values and the default value.\n"
+        "        -d    Print the default value for the parameter.\n"
         "    If <param> and <value> are supplied, sets the named parameter to the given value.\n"
         "    The <value> parameter may either be a number, or a named value.\n"
         "    If only <param> is supplied, prints the value of the named parameter.\n"
