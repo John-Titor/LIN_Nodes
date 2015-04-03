@@ -12,7 +12,5 @@ nodes/usb_link/lintool/lintool.dSYM/*
 *.lst
 *.hex
 *.map
-
-nodes/usb_link/micronucleus/usbdrv/oddebug.c.lst
-
+*.pyc
 nodes/usb_link/micronucleus/usbdrv/oddebug.c.lst
