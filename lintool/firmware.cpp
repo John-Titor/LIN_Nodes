@@ -33,6 +33,7 @@
 #include <cstring>
 #include <cstdlib>
 #include <stdexcept>
+#include <iostream>
 
 #include <lin_defs.h>
 
@@ -112,7 +113,11 @@ Firmware::Firmware(const char *fromFile)
 
     // add ourselves to the list
     _firmwares.push_back(this);
-    warnx("loaded %s from %s", functionName, fromFile);
+    std::cerr << "STATUS: loaded "
+              << functionName
+              << " from "
+              << fromFile
+              << std::endl;
 }
 
 Firmware::~Firmware()
