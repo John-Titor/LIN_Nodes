@@ -171,7 +171,7 @@ program_page(unsigned address, uint8_t *bytes, bool readback)
     for (auto tries = 0; tries < 3; tries++) {
 
         std::cerr << "STATUS: program: 0x"
-                  << std::hex << std::setw(4) << address;
+                  << std::hex << std::setfill('0') << std::setw(4) << address;
 
         if (tries > 0) {
             std::cerr << " (retry)";

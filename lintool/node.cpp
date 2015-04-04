@@ -167,7 +167,7 @@ Node::update(bool verify, bool save_params)
 
         std::cerr << "STATUS: "
                   << params().identity().str()
-                  << "updating firmware"
+                  << " updating firmware"
                   << std::endl;
 
         // select the node
@@ -322,8 +322,8 @@ Node::leave_bootloader(bool check)
                 usleep(20000);
 
             } catch (Link::ExLINError &e) {
-                std::cerr << "WARNING: " << e.what() << std::endl;
                 // transfer failed; node is probably still rebooting
+                // don't print anything here as it's misleading...
                 continue;
             }
         }

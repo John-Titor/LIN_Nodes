@@ -26,7 +26,9 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <stdexcept>
+#include "exceptions.h"
+#include <iostream>
+#include <iomanip>
 #include <unistd.h>
 #include <err.h>
 #include <sys/time.h>
@@ -280,22 +282,24 @@ read_param(uint16_t index)
 void
 print_status()
 {
-    warnx("free memory: %u", Link::get_status(RQ_STATUS_FREEMEM));
-    uint8_t status = Link::get_status();
-    warnx("status: %02x%s%s%s%s%s",
-          status,
-          ((status & RQ_STATUS_DATA_READY) ? " DATA_READY" : ""),
-          ((status & RQ_STATUS_DATA_ERROR) ? " DATA_ERROR" : ""),
-          ((status & RQ_STATUS_AWAKE) ? " AWAKE" : ""),
-          ((status & RQ_STATUS_WAITING) ? " WAITING" : ""),
-          ((status & RQ_STATUS_MASTER) ? " MASTER" : ""));
-    warnx("Errors:");
-    warnx("  line:            %u", Link::get_status(RQ_STATUS_LINERR, 0));
-    warnx("  checksum:        %u", Link::get_status(RQ_STATUS_LINERR, 1));
-    warnx("  parity:          %u", Link::get_status(RQ_STATUS_LINERR, 2));
-    warnx("  framing:         %u", Link::get_status(RQ_STATUS_LINERR, 3));
-    warnx("  synchronisation: %u", Link::get_status(RQ_STATUS_LINERR, 4));
-    warnx("  protocol:        %u", Link::get_status(RQ_STATUS_LINERR, 5));
+    std::cerr << "STATUS: free memory:            "
+              << (unsigned)Link::get_status(RQ_STATUS_FREEMEM)
+              << std::endl;
+    unsigned status = Link::get_status();
+    std::cerr << "STATUS: status byte:            "
+              << std::hex << std::setw(2) << std::setfill('0') << status
+              << ((status & RQ_STATUS_DATA_READY) ? " DATA_READY" : "")
+              << ((status & RQ_STATUS_DATA_ERROR) ? " DATA_ERROR" : "")
+              << ((status & RQ_STATUS_AWAKE) ? " AWAKE" : "")
+              << ((status & RQ_STATUS_WAITING) ? " WAITING" : "")
+              << ((status & RQ_STATUS_MASTER) ? " MASTER" : "")
+              << std::endl;
+    std::cerr << "STATUS: line errors:            " << (unsigned)Link::get_status(RQ_STATUS_LINERR, 0) << std::endl;
+    std::cerr << "STATUS: checksum errors:        " << (unsigned)Link::get_status(RQ_STATUS_LINERR, 1) << std::endl;
+    std::cerr << "STATUS: parity errors:          " << (unsigned)Link::get_status(RQ_STATUS_LINERR, 2) << std::endl;
+    std::cerr << "STATUS: framing errors:         " << (unsigned)Link::get_status(RQ_STATUS_LINERR, 3) << std::endl;
+    std::cerr << "STATUS: synchronisation errors: " << (unsigned)Link::get_status(RQ_STATUS_LINERR, 4) << std::endl;
+    std::cerr << "STATUS: protocol errors:        " << (unsigned)Link::get_status(RQ_STATUS_LINERR, 5) << std::endl;
 }
 
 } // namespace Link
