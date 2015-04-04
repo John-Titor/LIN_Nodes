@@ -125,8 +125,8 @@ BLSlave::st_response_received(Response &resp)
                 _memoryPointer = resp.DataByID.value;
                 break;
 
-            case Generic::kParamConfigBase ... Generic::kParamConfigTop:
-                eeprom_update_word((uint16_t *)((_sendIndex - Generic::kParamConfigBase) * 2), resp.DataByID.value);
+            case Parameter::configBase ... Parameter::configTop:
+                eeprom_update_word((uint16_t *)((_sendIndex - Parameter::configBase) * 2), resp.DataByID.value);
                 break;
 
             }
@@ -215,8 +215,8 @@ BLSlave::send_response()
         value = errors[_sendIndex - Generic::kParamLine];
         break;
 
-    case Generic::kParamConfigBase ... Generic::kParamConfigTop:
-        value = eeprom_read_word((uint16_t *)((_sendIndex - Generic::kParamConfigBase) * 2));
+    case Parameter::configBase ... Parameter::configTop:
+        value = eeprom_read_word((uint16_t *)((_sendIndex - Parameter::configBase) * 2));
         break;
 
     default:

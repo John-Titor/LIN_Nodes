@@ -1376,18 +1376,6 @@ param_exists(Parameter::Address address)
     if (address == kParamProtocol) {
         return true;
     }
-    if (address == kParamConfigBase) {
-        return true;
-    }
-    if (address == kParamConfigTop) {
-        return true;
-    }
-    if (address == kParamDefaultBase) {
-        return true;
-    }
-    if (address == kParamDefaultTop) {
-        return true;
-    }
     return false;
 }
 
@@ -1425,10 +1413,6 @@ static const PROGMEM char _param_name_Parity[] = "Parity";
 static const PROGMEM char _param_name_Framing[] = "Framing";
 static const PROGMEM char _param_name_Synch[] = "Synch";
 static const PROGMEM char _param_name_Protocol[] = "Protocol";
-static const PROGMEM char _param_name_ConfigBase[] = "ConfigBase";
-static const PROGMEM char _param_name_ConfigTop[] = "ConfigTop";
-static const PROGMEM char _param_name_DefaultBase[] = "DefaultBase";
-static const PROGMEM char _param_name_DefaultTop[] = "DefaultTop";
 
 const PROGMEM char *
 param_name(Parameter::Address address)
@@ -1477,18 +1461,6 @@ param_name(Parameter::Address address)
     }
     if (address == kParamProtocol) {
         return &_param_name_Protocol[0];
-    }
-    if (address == kParamConfigBase) {
-        return &_param_name_ConfigBase[0];
-    }
-    if (address == kParamConfigTop) {
-        return &_param_name_ConfigTop[0];
-    }
-    if (address == kParamDefaultBase) {
-        return &_param_name_DefaultBase[0];
-    }
-    if (address == kParamDefaultTop) {
-        return &_param_name_DefaultTop[0];
     }
     return nullptr;
 }

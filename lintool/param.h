@@ -104,7 +104,7 @@ public:
     /// @return             True if the parameter can be set.
     bool                is_settable() const 
     {
-        return (_address >= Generic::kParamConfigBase) && (_address < Generic::kParamConfigTop);
+        return (_address >= Parameter::configBase) && (_address < Parameter::configTop);
     }
 
 private:

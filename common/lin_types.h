@@ -35,6 +35,10 @@ public:
     typedef uint16_t Address;
 
     static const Address    noAddress = 0xffff;
+    static const Address    configBase = 0x400;     // base of non-volatile config parameters
+    static const Address    configTop = 0x4ef;
+    static const Address    defaultBase = 0x500;    // base of read-only defaults for the 0x400-4ef range
+    static const Address    defaultTop = 0x5ef;
 
     constexpr Parameter(Address address = noAddress) :
         _address(address)

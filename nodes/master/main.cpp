@@ -56,7 +56,7 @@ param_init()
     bool should_default = (options & Board::kOptResetConfig);
 
     // init parameters (set to defaults if requested or not valid
-    for (Parameter::Address addr = Generic::kParamConfigBase; addr < Generic::kParamConfigTop; addr++) {
+    for (Parameter::Address addr = Parameter::configBase; addr < Parameter::configTop; addr++) {
         Parameter p(addr);
         uint8_t encoding = param_encoding(addr);
 
@@ -120,8 +120,8 @@ Parameter::set(uint16_t value) const
             Board::reset_to_defaults();
         }
 
-    case Generic::kParamConfigBase ... Generic::kParamConfigTop:
-        eeprom_update_word((uint16_t *)((address() - Generic::kParamConfigBase) * 2), value);
+    case Parameter::configBase ... Parameter::configTop:
+        eeprom_update_word((uint16_t *)((address() - Parameter::configBase) * 2), value);
         break;
     }
 }
@@ -154,11 +154,11 @@ Parameter::get() const
     case Generic::kParamWatchdogResets:
         return Board::wdt_reset_count;
 
-    case Generic::kParamConfigBase ... Generic::kParamConfigTop:
-        return eeprom_read_word((const uint16_t *)((address() - Generic::kParamConfigBase) * 2));
+    case Parameter::configBase ... Parameter::configTop:
+        return eeprom_read_word((const uint16_t *)((address() - Parameter::configBase) * 2));
 
-    case Generic::kParamDefaultBase ... Generic::kParamDefaultTop:
-        return param_default(address() - Generic::kParamDefaultBase + Generic::kParamConfigBase);
+    case Parameter::defaultBase ... Parameter::defaultTop:
+        return param_default(address() - Parameter::defaultBase + Parameter::configBase);
 
     }
 

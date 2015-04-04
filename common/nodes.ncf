@@ -128,12 +128,8 @@ node Generic {
         // 0x300-0x3ff function status (node specfic)
 
         // 0x400-0x4ff non-volatile parameters
-        ConfigBase          { address = 0x0400; }
-        ConfigTop           { address = 0x04ef; }
 
         // 0x500-0x5ff default values for non-volatile parameters
-        DefaultBase         { address = 0x0500; }
-        DefaultTop          { address = 0x05ef; }
     }
     encoding {
         board_function {

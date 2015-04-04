@@ -442,10 +442,6 @@ static const uint16_t kParamParity = 0x0202;
 static const uint16_t kParamFraming = 0x0203;
 static const uint16_t kParamSynch = 0x0204;
 static const uint16_t kParamProtocol = 0x0205;
-static const uint16_t kParamConfigBase = 0x0400;
-static const uint16_t kParamConfigTop = 0x04ef;
-static const uint16_t kParamDefaultBase = 0x0500;
-static const uint16_t kParamDefaultTop = 0x05ef;
 
 } // namespace Generic
 
