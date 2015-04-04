@@ -236,6 +236,8 @@ ParamSet::ParamSet(unsigned node) :
             _params.push_back(p);
         }
     }
+
+    _identity << _node << "/" << _function << "/" << Encoding::info(kEncoding_board_function, _function);
 }
 
 ParamSet::~ParamSet()
@@ -252,16 +254,10 @@ ParamSet::~ParamSet()
     }
 }
 
-char *
-ParamSet::identity() const
+std::ostringstream &
+ParamSet::identity()
 {
-    char *str;
-
-    asprintf(&str, "[%u:%u:%s]",
-             _node,
-             _function,
-             Encoding::info(kEncoding_board_function, _function));
-    return str;
+    return _identity;
 }
 
 bool

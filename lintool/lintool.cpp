@@ -35,6 +35,8 @@
 #include <cstdlib>
 #include <cstring>
 #include <stdexcept>
+#include <iostream>
+#include <iomanip>
 
 #include <lin_defs.h>
 
@@ -43,6 +45,11 @@
 #include "param.h"
 #include "firmware.h"
 #include "node.h"
+
+EXCEPTION(Exception, ExUsageError);
+EXCEPTION(Exception, ExArgumentError);
+EXCEPTION(Exception, ExFailure);
+EXCEPTION(Exception, ExSuccess);
 
 void usage();
 
@@ -56,7 +63,6 @@ void
 history(int argc, char *argv[])
 {
     Log::acquire();
-    Log::print();
 }
 
 void
@@ -88,8 +94,7 @@ scan(int argc, char *argv[])
             break;
 
         default:
-            warnx("ERROR: unrecognised option '-%c'", ch);
-            usage();
+            RAISE(ExUsageError, "unrecognised option '-" << (char)ch << "'");
         }
     }
 
@@ -99,14 +104,8 @@ scan(int argc, char *argv[])
     Node::scan(node);
 
     for (auto n : Node::nodes()) {
-        auto pset = n->params();
-        char *str = pset.identity();
-
-        printf("%s\n", str);
-        free(str);
+        std::cout << n->params().identity().str() << std::endl;
     }
-
-    Log::print();
 }
 
 void
@@ -122,8 +121,7 @@ dump_params(int argc, char *argv[])
             break;
 
         default:
-            warnx("ERROR: unrecognised option '-%c'", ch);
-            usage();
+            RAISE(ExUsageError, "unrecognised option '-" << (char)ch << "'");
         }
     }
 
@@ -133,14 +131,14 @@ dump_params(int argc, char *argv[])
     Node::scan(node);
 
     if (Node::exists(Bootloader::kNodeAddress) && (node == Node::kNoNode)) {
-        errx(1, "ERROR: cannot save all parameters, there is a node that needs recovery");
+        RAISE(ExFailure, "cannot save all parameters, there is a node that needs recovery");
     }
 
     const char *pfile = (argc > 0) ? argv[0] : "/dev/stdout";
     ParamDB pdb;
 
     for (auto n : Node::nodes()) {
-        auto pset = n->params();
+        auto &pset = n->params();
         pset.sync();
         pdb.store(pset);
     }
@@ -166,8 +164,7 @@ load_params(int argc, char *argv[])
             break;
 
         default:
-            warnx("ERROR: unrecognised option '-%c'", ch);
-            usage();
+            RAISE(ExUsageError, "unrecognised option '-" << (char)ch << "'");
         }
     }
 
@@ -180,11 +177,12 @@ load_params(int argc, char *argv[])
         for (auto n : Node::nodes()) {
             n->set_defaults();
         }
+
         return;
     }
 
     if (Node::exists(Bootloader::kNodeAddress) && (node == Node::kNoNode)) {
-        errx(1, "ERROR: cannot load all parameters, there is a node that needs recovery");
+        RAISE(ExFailure, "cannot load all parameters, there is a node that needs recovery");
     }
 
     const char *pfile = (argc > 0) ? argv[0] : "/dev/stdin";
@@ -194,7 +192,7 @@ load_params(int argc, char *argv[])
         pdb.read(pfile);
 
     } catch (std::runtime_error &e) {
-        errx(1, "ERROR: reading %s: %s", pfile, e.what());
+        RAISE(ExFailure, "reading " << pfile << ": " << e.what());
     }
 
     // iterate nodes within the database
@@ -210,26 +208,33 @@ load_params(int argc, char *argv[])
         // if we didn't find a node present...
         if (node == nullptr) {
             if (Node::exists(nodeAddress)) {
-                warnx("WARNING: node at %u does not match function %u.", nodeAddress, nodeFunction);
+                std::cerr << "WARNING: node at "
+                          << nodeAddress
+                          << " does not match function "
+                          << nodeFunction
+                          << "."
+                          << std::endl;
 
             } else {
-                warnx("WARNING: node at %u is not responding.", nodeAddress);
+                std::cerr << "WARNING: node at "
+                          << nodeAddress
+                          << " is not responding."
+                          << std::endl;
             }
 
-            warnx("WARNING: Skipping parameter load for node at %u.", nodeAddress);
+            std::cerr << "WARNING: Skipping parameter load for node at "
+                      << nodeAddress
+                      << "."
+                      << std::endl;
             continue;
         }
 
         // update node parameter set from database
-        auto pset = node->params();
+        auto &pset = node->params();
 
         for (auto dbparam : dbnode["parameters"].ToArray()) {
-            try {
-                pset.set(dbparam.ToObject());
-
-            } catch (Exception &e) {
-                warnx("WARNING: %s.", e.what());
-            }
+            pset.set(dbparam.ToObject());
+            // allow exceptions to fail the operation
         }
 
         pset.sync();
@@ -260,8 +265,7 @@ edit_param(int argc, char *argv[])
             break;
 
         default:
-            warnx("ERROR: unrecognised option '-%c'", ch);
-            usage();
+            RAISE(ExUsageError, "unrecognised option '-" << (char)ch << "'");
         }
     }
 
@@ -275,6 +279,7 @@ edit_param(int argc, char *argv[])
     case 2:
         if (!strcmp(argv[1], "-d")) {
             set_default = true;
+
         } else {
             newvalue = argv[1];
         }
@@ -288,18 +293,16 @@ edit_param(int argc, char *argv[])
         break;
 
     default:
-        warnx("ERROR: too many arguments");
-        usage();
+        RAISE(ExUsageError, "too many arguments");
     }
 
     if (node == Node::kNoNode) {
-        errx(1, "missing node address");
+        RAISE(ExUsageError, "missing node address");
     }
 
     Node::scan(node);
 
-    auto np = Node::nodes().front();
-    auto pset = np->params();
+    auto &pset = Node::nodes().front()->params();
 
     for (auto param : pset.list()) {
         if ((paramname != nullptr) && (strcmp(param->name(), paramname))) {
@@ -311,21 +314,22 @@ edit_param(int argc, char *argv[])
 
         if (newvalue == nullptr) {
             if ((paramname != nullptr) || show_readonly || param->is_settable()) {
-                printf("%s %u 0x%x", param->name(), param->get(), param->get());
+                std::cout << param->name() << "/";
+                std::cout << "/" << param->get();
 
                 auto encoding_name = Encoding::name(encoding);
 
                 if (encoding_name != nullptr) {
-                    printf(" %s", encoding_name);
+                    std::cout << "/" << encoding_name;
 
                     auto info = Encoding::info(encoding, param->get());
 
                     if (info != nullptr) {
-                        printf(" %s", info);
+                        std::cout << "/" << info;
                     }
                 }
 
-                printf("\n");
+                std::cout << std::endl;
             }
 
             if (want_info && param->is_settable()) {
@@ -335,8 +339,17 @@ edit_param(int argc, char *argv[])
                     auto info = Encoding::info(encoding, value);
 
                     if (info != nullptr) {
-                        printf("        %.5u / 0x%04x / %s%s\n", value, value, info,
-                            (value == defval) ? " (default)" : "");
+                        std::cout << "        "
+                                  << std::setw(5)
+                                  << value
+                                  << "/"
+                                  << info;
+
+                        if (value == defval) {
+                            std::cout << " (default)";
+                        }
+
+                        std::cout << std::endl;
                     }
                 }
             }
@@ -345,20 +358,21 @@ edit_param(int argc, char *argv[])
         }
 
         if (!param->is_settable()) {
-            errx(1, "%s cannot be set", param->name());
+            RAISE(ExArgumentError, param->name() << " cannot be set");
         }
 
         uint16_t value;
 
         if (set_default) {
             value = param->get_default();
+
         } else {
             if (!Encoding::value(encoding, newvalue, value)) {
                 char *cp;
                 value = strtoul(newvalue, &cp, 0);
 
                 if (*cp != '\0') {
-                    errx(1, "bad parameter value '%s'", newvalue);
+                    RAISE(ExArgumentError, "bad parameter value '" << newvalue << "'");
                 }
             }
         }
@@ -372,10 +386,8 @@ edit_param(int argc, char *argv[])
 
     // failing to find a parameter name when attempting to set a parameter is fatal
     if ((paramname != nullptr) && (newvalue != nullptr)) {
-        char *str = pset.identity();
 
-        errx(1, "%s parameter '%s' does not exist", str, paramname);
-        free(str);
+        RAISE(ExArgumentError, pset.identity().str() << " parameter '" << paramname << "' does not exist");
     }
 }
 
@@ -393,7 +405,7 @@ update(int argc, char *argv[])
             node = strtoul(optarg, nullptr, 0);
 
             if (node == 0) {
-                errx(1, "bad node address '%s'", optarg);
+                RAISE(ExArgumentError, "bad node address '" << optarg << "'");
             }
 
             break;
@@ -407,8 +419,7 @@ update(int argc, char *argv[])
             break;
 
         default:
-            warnx("ERROR: unrecognised option '-%c'", ch);
-            usage();
+            RAISE(ExUsageError, "unrecognised option '-" << (char)ch << "'");
         }
     }
 
@@ -422,7 +433,7 @@ update(int argc, char *argv[])
             new Firmware(argv[arg]);
 
         } catch (std::runtime_error &e) {
-            errx(1, "ERROR: loading firmware from %s: %s", argv[arg], e.what());
+            RAISE(ExFailure, "loading firmware from " << argv[arg] << ": " << e.what());
         }
     }
 
@@ -431,7 +442,7 @@ update(int argc, char *argv[])
             n->update(verify, save_params);
 
         } catch (Exception &e) {
-            warnx("WARNING: failed updating node@%u: %s", n->address(), e.what());
+            RAISE(ExFailure, "failed updating node@" << n->address() << ": " << e.what());
         }
     }
 }
@@ -464,13 +475,18 @@ struct {
     {
         "scan",
         "lintool [-l] scan [-n <node>]\n"
-        "    Scan for a specific node or list all nodes.\n",
+        "    Scan for a specific node or list all nodes.\n"
+        "    Found nodes are printed in the format <node id>/<function id>/<function name>\n",
         scan
     },
     {
         "dump_params",
         "lintool [-l] dump_params [-n <node>] [<file>]\n"
-        "    Dump parameters to file (or stdout if <file> not specified).\n",
+        "    Dump parameters to file (or stdout if <file> not specified).\n"
+        "    Parameters are formatted as a JSON array holding one dictionary per node. Each node\n"
+        "    dictionary in turn holds four values; 'name', 'node' and 'function' describe\n"
+        "    the node, while 'parameters' holds an array of parameter dictionaries. Each dictionary\n"
+        "    describes one parameter, with 'name', 'address', 'value' and 'info' properties.\n",
         dump_params
     },
     {
@@ -480,7 +496,8 @@ struct {
         "        -d    If specified, node parameters will be reset to defaults.\n"
         "    If neither -d nor <file> are specified, parameters will be read from stdin.\n"
         "    Data should be in the same format as emitted by dump_params. Nodes not defined\n"
-        "    in the data will not be updated.\n",
+        "    in the data will not be updated. Notes defined in the data but not present will\n"
+        "    result in a diagnostic message but other nodes will be updated.\n",
         load_params
     },
     {
@@ -494,8 +511,9 @@ struct {
         "    If <param> and <value> are supplied, sets the named parameter to the given value.\n"
         "    The <value> parameter may either be a number, or a named value.\n"
         "    If only <param> is supplied, prints the value of the named parameter.\n"
-        "    If neither are supplied, all parameters from <node> are printed.\n"
-        "    Parameters are printed in the format <param> <value> [<encoding> <info>].\n",
+        "    If neither are supplied, all parameters from <node> are printed.\n\n"
+        "    Parameters are printed in the format <name>/<value>[/<encoding name>[/<encoded name>]].\n"
+        "    Allowed named values are printed in the format <value>/<encoded name>.\n",
         edit_param
     },
     {
@@ -508,7 +526,8 @@ struct {
         "    Only nodes for which firmware is loaded can be updated. If -n is not specified,\n"
         "    all nodes will be updated.\n"
         "    To update a node in recovery mode that has lost its type, pass -n 32 and supply\n"
-        "    only one firmware file. The node will take the identity specified in the file.\n",
+        "    only one firmware file. No check that the firmware file corresponds to the node\n"
+        "    is or can be performed in this case.\n",
         update
     }
 };
@@ -516,11 +535,12 @@ struct {
 void
 usage()
 {
-    fprintf(stderr, "\nCommon options:\n");
-    fprintf(stderr, "        -l  enable logging (specify twice to print empty frames).\n\n");
+    std::cerr << "Common options:" << std::endl;
+    std::cerr << "        -l  enable logging (specify twice to print empty frames)." << std::endl;
+    std::cerr << "        -A  enable automation mode" << std::endl << std::endl;
 
     for (auto cmd : commands) {
-        fprintf(stderr, "%s\n", cmd.help);
+        std::cerr << cmd.help << std::endl;
     }
 
     exit(1);
@@ -529,55 +549,77 @@ usage()
 int
 main(int argc, char *argv[])
 {
-    int ch;
-
-    while ((ch = getopt(argc, argv, "l")) != -1) {
-        switch (ch) {
-        case 'l':
-            Log::enable++;
-            break;
-
-        default:
-            warnx("ERROR: unrecognised option '-%c'", ch);
-
-        // FALLTHROUGH
-        case '?':
-            usage();
-        }
-    }
-
-    argc -= optind;
-    argv += optind;
-    optreset = 1;
-    optind = 1;
-
-    if (argc < 1) {
-        usage();
-    }
+    bool automated = false;
 
     try {
-        Link::connect();
+        int ch;
+
+        while ((ch = getopt(argc, argv, "lA")) != -1) {
+            switch (ch) {
+            case 'l':
+                Log::enable++;
+                break;
+
+            case 'A':
+                automated = true;
+                break;
+
+            default:
+                RAISE(ExUsageError, "unrecognised option '-" << (char)ch << "'");
+
+            // FALLTHROUGH
+            case '?':
+                usage();
+            }
+        }
+
+        argc -= optind;
+        argv += optind;
+        optreset = 1;
+        optind = 1;
+
+        if (argc < 1) {
+            usage();
+        }
+
+        try {
+            Link::connect();
+
+        } catch (Exception &e) {
+            errx(1, "connection failed: %s", e.what());
+        }
+
+        for (auto cmd : commands) {
+            if (!strcmp(cmd.cmd, argv[0])) {
+                cmd.func(argc, argv);
+                RAISE(ExSuccess, "OK");
+            }
+        }
+
+        RAISE(ExUsageError, "unrecognised command '" << argv[0] << "'");
+
+    } catch (ExUsageError &e) {
+        std::cerr << "USAGE: "
+                  << e.what()
+                  << std::endl;
+
+        if (!automated) {
+            usage();
+        }
+
+    } catch (ExSuccess &e) {
+        Log::print();
+
+        if (automated) {
+            std::cerr << "SUCCESS: " << e.what() << std::endl;
+        }
+
+        exit(0);
 
     } catch (Exception &e) {
-        errx(1, "connection failed: %s", e.what());
+        Log::print();
+        std::cerr << "ERROR: " << e.what() << std::endl;
+        exit(1);
     }
-
-    for (auto cmd : commands) {
-        if (!strcmp(cmd.cmd, argv[0])) {
-            try {
-                cmd.func(argc, argv);
-
-            } catch (Exception &e) {
-                errx(1, "%s failed: %s", cmd.cmd, e.what());
-                Log::print();
-            }
-
-            Log::print();
-            exit(0);
-        }
-    }
-
-    warnx("ERROR: unrecognised command '%s'", argv[0]);
-    usage();
 }
 

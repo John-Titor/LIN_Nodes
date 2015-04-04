@@ -28,6 +28,8 @@
 
 #include <unistd.h>
 #include <err.h>
+#include <iostream>
+#include <iomanip>
 
 #include "upload.h"
 #include "link.h"
@@ -120,6 +122,7 @@ reset_bootloader()
     if (Link::read_param(Generic::kParamOperationMode) != operation_magic::kBootloader) {
         RAISE(ExProtocol, "not in bootloader mode");
     }
+
     Link::write_param(Generic::kParamOperationMode, 1);
 }
 
@@ -167,7 +170,14 @@ program_page(unsigned address, uint8_t *bytes, bool readback)
 
     for (auto tries = 0; tries < 3; tries++) {
 
-        warnx("program: 0x%04x%s", address, (tries > 0) ? " (retry)" : "");
+        std::cerr << "STATUS: program: 0x"
+                  << std::hex << std::setw(4) << address;
+
+        if (tries > 0) {
+            std::cerr << " (retry)";
+        }
+
+        std::cerr << std::endl;
 
         // set the page address
         set_address(address);
@@ -187,24 +197,37 @@ program_page(unsigned address, uint8_t *bytes, bool readback)
 
         } catch (ExCRCError &e) {
             // we are prepared to retry here...
-            warnx("CRC error (%u) we have %x bootloader wants %x",
-                  tries, crc, Link::read_param(Bootloader::kParamPageCRC));
+            std::cerr << "WARNING: CRC error ("
+                      << tries
+                      << ") we have "
+                      << crc
+                      << " bootloader wanted "
+                      << Link::read_param(Bootloader::kParamPageCRC)
+                      << std::endl;
             reset_bootloader();
             continue;
 
         } catch (ExProtocol &e) {
             // write may have been dropped - page still thinks it wants more data
-            warnx("page write failed (%u)", tries);
+            std::cerr << "WARNING: page write failed ("
+                      << tries
+                      << ")"
+                      << std::endl;
             continue;
 
         } catch (ExBadAddress &e) {
             // address write may have been corrupted
-            warnx("page address failed (%u)", tries);
+            std::cerr << "WARNING: page address failed ("
+                      << tries
+                      << ")"
+                      << std::endl;
             continue;
         }
 
         if (readback) {
-            warnx("verify: 0x%04x", address);
+            std::cerr << "STATUS: verify 0x"
+                      << std::hex << std::setfill('0') << std::setw(4) << address
+                      << std::endl;
 
             for (unsigned offset = 0; offset < pagesize; offset++) {
                 // readback for reset vector will never compare, so ignore it
@@ -268,8 +291,9 @@ upload(Firmware *fw, bool readback)
 
     reset_bootloader();
 
-    warnx("bl_reason: %s",
-          Encoding::info(kEncoding_bl_reason, Link::read_param(Bootloader::kParamReason)));
+    std::cerr << "STATUS: bl_reason: "
+              << Encoding::info(kEncoding_bl_reason, Link::read_param(Bootloader::kParamReason))
+              << std::endl;
 
     if (status() != bl_status::kWaitingForProgrammer) {
         RAISE(ExProtocol, "bootloader in unexpected state");

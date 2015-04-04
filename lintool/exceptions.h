@@ -34,12 +34,12 @@
 #include <sstream>
 #include <exception>
 
-#define EXCEPTION(Super,Current)                                    \
-    class Current : public Super {                                  \
-    public: Current ( const std::string & desc) : Super (desc) {}   \
-    }; struct __hack_##Current
+#define EXCEPTION(Super, Current)                                  \
+    class Current : public Super {                                 \
+    public: Current (const std::string & desc) : Super (desc) {}   \
+    }
 
-#define RAISE(Err, msg) { std::ostringstream oss; oss << msg; throw (Err(oss.str())); }
+#define RAISE(Err, msg) { std::ostringstream oss; oss << #Err ": " << msg; throw (Err(oss.str())); }
 
 class Exception : public std::exception
 {

@@ -31,6 +31,7 @@
 
 #include <list>
 #include <cstdio>
+#include <sstream>
 
 #include <lin_defs.h>
 
@@ -128,7 +129,7 @@ public:
 
     /// @return             A formatted description of the node that this
     ///                     parameter set applies to.
-    char                *identity() const;
+    std::ostringstream  &identity();
 
     /// Synchronises all parameters in the set with the node.
     ///
@@ -173,6 +174,7 @@ private:
     unsigned            _node;
     unsigned            _function = board_function::kUnknown;
     Param::List         _params;
+    std::ostringstream  _identity;
 };
 
 class ParamDB

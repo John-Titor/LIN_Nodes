@@ -28,6 +28,7 @@
 
 #include <err.h>
 #include <unistd.h>
+#include <iostream>
 
 #include "node.h"
 #include "link.h"
@@ -151,10 +152,11 @@ Node::update(bool verify, bool save_params)
         RAISE(ExUpdateFailed, e.what());
     }
 
-    char *ident = params().identity();  // XXX leaks on exception...
-
     if (fw == nullptr) {
-        warnx("%s no firmware loaded, skipping", ident);
+        std::cerr << "STATUS: "
+                  << params().identity().str()
+                  << "no firmware loaded, skipping"
+                  << std::endl;
 
     } else {
 
@@ -163,7 +165,10 @@ Node::update(bool verify, bool save_params)
             params().sync();
         }
 
-        warnx("%s updating firmware", ident);
+        std::cerr << "STATUS: "
+                  << params().identity().str()
+                  << "updating firmware"
+                  << std::endl;
 
         // select the node
         Link::set_node(address());
@@ -177,18 +182,20 @@ Node::update(bool verify, bool save_params)
         // return to program mode and handle follow-up actions
         if (function() == board_function::kUnconfigured) {
             leave_bootloader(false);
+
         } else {
             leave_bootloader(true);
 
             // write parameters back if requested
             if (save_params) {
-                warnx("%s restoring configuration", ident);
+                std::cerr << "STATUS: "
+                          << params().identity().str()
+                          << "restoring configuration"
+                          << std::endl;
                 params().sync(true);
             }
         }
     }
-
-    free(ident);
 }
 
 void
@@ -214,6 +221,7 @@ Node::set_defaults()
             Link::enable_master(false);
             usleep(500000);             // 500ms seems to work OK
         }
+
     } catch (Exception &e) {
         RAISE(ExDefaultFailed, "trying to set defaults: " << e.what());
     }
@@ -291,7 +299,7 @@ Node::leave_bootloader(bool check)
         }
 
         if (address() == Master::kNodeAddress) {
-            // We just tried to reboot the master node, so go through the master 
+            // We just tried to reboot the master node, so go through the master
             // setup process again since we need to kick it off the bus once more.
             //
             // Note that it's not necessary to re-enable master mode; it will happen automatically
@@ -314,7 +322,7 @@ Node::leave_bootloader(bool check)
                 usleep(20000);
 
             } catch (Link::ExLINError &e) {
-                warnx("link error: %s", e.what());
+                std::cerr << "WARNING: " << e.what() << std::endl;
                 // transfer failed; node is probably still rebooting
                 continue;
             }
