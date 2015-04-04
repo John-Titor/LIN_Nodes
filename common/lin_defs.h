@@ -521,9 +521,7 @@ static const uint16_t kParamPassingBlinkCount = 0x042b;
 static const uint16_t kParamPathLightTime = 0x042c;
 static const uint16_t kParamInteriorLightTime = 0x042d;
 static const uint16_t kParamWelcomeLightTime = 0x042e;
-static const uint16_t kParamBrakeBlinkPeriod = 0x042f;
-static const uint16_t kParamBrakeBlinkCount = 0x0430;
-static const uint16_t kParamWiperInterval = 0x0431;
+static const uint16_t kParamWiperInterval = 0x042f;
 
 } // namespace Master
 

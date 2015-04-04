@@ -103,48 +103,6 @@ private:
     }
 };
 
-class BrakeBlinker : public Timer
-{
-public:
-    BrakeBlinker() :
-        Timer(blink, this),
-        _state(false),
-        _count(0)
-    {}
-
-    bool        state() const { return _state; }
-    void        start()
-    {
-        _state = true;
-        _remaining = _interval = Parameter(kParamBrakeBlinkPeriod).get();
-        _count = Parameter(kParamBrakeBlinkCount).get();
-    }
-
-private:
-    volatile bool       _state: 1;
-    uint8_t             _count;
-
-    static void blink(void *arg)
-    {
-        auto b = reinterpret_cast<BrakeBlinker *>(arg);
-        b->_blink();
-    }
-    void        _blink()
-    {
-        if (_state && (_count > 0)) {
-            _state = false;
-            _count--;
-
-        } else {
-            _state = true;
-
-            if (_count == 0) {
-                _remaining = 0;
-            }
-        }
-    }
-};
-
 class WiperDelay : public Timer
 {
 public:
@@ -192,7 +150,6 @@ private:
 };
 
 static TurnBlinker      turnBlinker;
-static BrakeBlinker     brakeBlinker;
 static StayAwakeTimer   awakeDelay;
 static WiperDelay       wiperDelay;
 static Decrementer      interiorLightsDelay;
@@ -402,23 +359,21 @@ headLights(Response &resp)
 static void
 tailLights(Response &resp)
 {
-    // brake lights
-    if (Switches::test(input_assignment::kBrake)) {
+    resp.Relays.Brake = 0;
+    resp.Relays.Reverse = 0;
 
-        // start the blinker when the switch comes on
-        if (Switches::changed(input_assignment::kBrake)) {
-            brakeBlinker.start();
-        }
+    if (Switches::test(input_assignment::kIgnition)) {
 
-        // brake light on if the blinker & pedal both agree
-        if (brakeBlinker.state()) {
+        // brake lights
+        if (Switches::test(input_assignment::kBrake)) {
+
             resp.Relays.Brake = 1;
         }
-    }
 
-    // reverse lights
-    if (Switches::test(input_assignment::kReverse)) {
-        resp.Relays.Reverse = 1;
+        // reverse lights
+        if (Switches::test(input_assignment::kReverse)) {
+            resp.Relays.Reverse = 1;
+        }
     }
 }
 

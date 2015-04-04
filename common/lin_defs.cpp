@@ -1711,12 +1711,6 @@ param_exists(Parameter::Address address)
     if (address == kParamWelcomeLightTime) {
         return true;
     }
-    if (address == kParamBrakeBlinkPeriod) {
-        return true;
-    }
-    if (address == kParamBrakeBlinkCount) {
-        return true;
-    }
     if (address == kParamWiperInterval) {
         return true;
     }
@@ -1866,12 +1860,6 @@ param_default(Parameter::Address address)
     }
     if (address == kParamWelcomeLightTime) {
         return 30;
-    }
-    if (address == kParamBrakeBlinkPeriod) {
-        return 0;
-    }
-    if (address == kParamBrakeBlinkCount) {
-        return 0;
     }
     if (address == kParamWiperInterval) {
         return 0;
@@ -2023,12 +2011,6 @@ param_encoding(Parameter::Address address)
     if (address == kParamWelcomeLightTime) {
         return kEncoding_sec;
     }
-    if (address == kParamBrakeBlinkPeriod) {
-        return kEncoding_msec;
-    }
-    if (address == kParamBrakeBlinkCount) {
-        return kEncoding_up_to_10;
-    }
     if (address == kParamWiperInterval) {
         return kEncoding_msec;
     }
@@ -2083,8 +2065,6 @@ static const PROGMEM char _param_name_PassingBlinkCount[] = "PassingBlinkCount";
 static const PROGMEM char _param_name_PathLightTime[] = "PathLightTime";
 static const PROGMEM char _param_name_InteriorLightTime[] = "InteriorLightTime";
 static const PROGMEM char _param_name_WelcomeLightTime[] = "WelcomeLightTime";
-static const PROGMEM char _param_name_BrakeBlinkPeriod[] = "BrakeBlinkPeriod";
-static const PROGMEM char _param_name_BrakeBlinkCount[] = "BrakeBlinkCount";
 static const PROGMEM char _param_name_WiperInterval[] = "WiperInterval";
 
 const PROGMEM char *
@@ -2230,12 +2210,6 @@ param_name(Parameter::Address address)
     }
     if (address == kParamWelcomeLightTime) {
         return &_param_name_WelcomeLightTime[0];
-    }
-    if (address == kParamBrakeBlinkPeriod) {
-        return &_param_name_BrakeBlinkPeriod[0];
-    }
-    if (address == kParamBrakeBlinkCount) {
-        return &_param_name_BrakeBlinkCount[0];
     }
     if (address == kParamWiperInterval) {
         return &_param_name_WiperInterval[0];

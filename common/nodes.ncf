@@ -316,8 +316,6 @@ node Master {
         PathLightTime           { init_value = 30;                    sec; }
         InteriorLightTime       { init_value = 30;                    sec; }
         WelcomeLightTime        { init_value = 30;                    sec; }
-        BrakeBlinkPeriod        { init_value = 0;                     msec; }
-        BrakeBlinkCount         { init_value = 0;                     up_to_10; }
         WiperInterval           { init_value = 0;                     msec; }
     }
     encoding {
