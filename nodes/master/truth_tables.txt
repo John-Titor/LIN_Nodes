@@ -1,17 +1,16 @@
 
-_Hazard_|_Ignition_|_LeftTurn_|_RightTurn_| == |__LeftTurn__|__RightTurn__
---------|----------|----------|-----------|----|------------|-------------
- off    | x        | off      | off       |    | off        | off         
- off    | off      | on       | off       |    | on         | off         
- off    | off      | off      | on        |    | off        | on          
- off    | off      | off      | off       |    | off        | off         
- on     | x        | x        | x         |    | blink      | blink       
- on     | x        | x        | x         |    | blink      | blink       
- off    | on       | on       | off       |    | blink      | off         
- off    | on       | on       | off       |    | blink      | off         
- off    | on       | off      | on        |    | off        | blink       
- off    | on       | off      | on        |    | off        | blink       
- off    | on       | off      | off       |    | see (1)    | see (1)     
+_Hazard_|_Ignition_|_*Turn_| == |__*Turn__
+--------|----------|-------|----|---------
+ off    | x        | off   |    | off                 
+ off    | off      | on    |    | on                  
+ off    | off      | off   |    | off                  
+ off    | off      | off   |    | off                 
+ on     | x        | x     |    | blink             
+ off    | on       | on    |    | blink               
+ off    | on       | on    |    | blink               
+ off    | on       | off   |    | off               
+ off    | on       | off   |    | off               
+ off    | on       | off   |    | see (1)
  
 (1) __LeftTurn__ and __RightTurn__ continue to blink as though _LeftTurn_ or _RightTurn_ were enabled until at least _PassingBlinkCount_ blinks have been made.
 
@@ -22,27 +21,16 @@ _Ignition_|_MarkerLights_|__HeadLights__| == |__MarkerLights__
  on       | off          | off          |    | off
  on       | x            | on           |    | on
 
-_Ignition_|_MarkerLights_|__HeadLights__|__LeftTurn__| == |__LeftTurnMarker__
-----------|--------------|--------------|------------|----|------------------
- off      | off          | x            | off        |    | off
- off      | off          | x            | on         |    | on
- x        | on           | x            | off        |    | on
- x        | on           | x            | on         |    | off
- on       | off          | off          | off        |    | off
- on       | off          | off          | on         |    | on
- on       | x            | on           | off        |    | on
- on       | x            | on           | on         |    | off
-
-_Ignition_|_MarkerLights_|__HeadLights__|__RightTurn__| == |__RightTurnMarker__
-----------|--------------|--------------|-------------|----|-------------------
- off      | off          | x            | off         |    | off
- off      | off          | x            | on          |    | on
- x        | on           | x            | off         |    | on
- x        | on           | x            | on          |    | off
- on       | off          | off          | off         |    | off
- on       | off          | off          | on          |    | on
- on       | x            | on           | off         |    | on
- on       | x            | on           | on          |    | off
+_Ignition_|_MarkerLights_|__HeadLights__|__*Turn__| == |__*TurnMarker__
+----------|--------------|--------------|---------|----|------------------
+ off      | off          | x            | off     |    | off
+ off      | off          | x            | on      |    | on
+ x        | on           | x            | off     |    | on
+ x        | on           | x            | on      |    | off
+ on       | off          | off          | off     |    | off
+ on       | off          | off          | on      |    | on
+ on       | x            | on           | off     |    | on
+ on       | x            | on           | on      |    | off
 
 _Door_|_InteriorLight_|_Ignition_| == |__InteriorLight__
 ------|---------------|----------|----|------------------
