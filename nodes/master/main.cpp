@@ -115,7 +115,7 @@ Parameter::set(uint16_t value) const
         switch (value) {
         case operation_magic::kEnterBootloader:
             Board::enter_bootloader(Master::kNodeAddress, board_function::kMaster);
-            
+
         case operation_magic::kSetDefaults:
             Board::reset_to_defaults();
         }

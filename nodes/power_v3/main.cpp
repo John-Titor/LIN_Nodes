@@ -180,7 +180,7 @@ Parameter::set(uint16_t value) const
         case operation_magic::kEnterBootloader:
             Board::enter_bootloader(RelaySlave::node_address(Board::get_mode()),
                                     board_function::kPowerV3);
-            
+
         case operation_magic::kSetDefaults:
             Board::reset_to_defaults();
         }
