@@ -1,0 +1,112 @@
+
+_Hazard_|_Ignition_|_LeftTurn_|_RightTurn_| == |__LeftTurn__|__RightTurn__
+--------|----------|----------|-----------|----|------------|-------------
+ off    | x        | off      | off       |    | off        | off         
+ off    | off      | on       | off       |    | on         | off         
+ off    | off      | off      | on        |    | off        | on          
+ off    | off      | off      | off       |    | off        | off         
+ on     | x        | x        | x         |    | blink      | blink       
+ on     | x        | x        | x         |    | blink      | blink       
+ off    | on       | on       | off       |    | blink      | off         
+ off    | on       | on       | off       |    | blink      | off         
+ off    | on       | off      | on        |    | off        | blink       
+ off    | on       | off      | on        |    | off        | blink       
+ off    | on       | off      | off       |    | see (1)    | see (1)     
+ 
+(1) __LeftTurn__ and __RightTurn__ continue to blink as though _LeftTurn_ or _RightTurn_ were enabled until at least _PassingBlinkCount_ blinks have been made.
+
+_Ignition_|_MarkerLights_|__HeadLights__| == |__MarkerLights__
+----------|--------------|--------------|----|----------------
+ off      | off          | x            |    | off
+ x        | on           | x            |    | on
+ on       | off          | off          |    | off
+ on       | x            | on           |    | on
+
+_Ignition_|_MarkerLights_|__HeadLights__|__LeftTurn__| == |__LeftTurnMarker__
+----------|--------------|--------------|------------|----|------------------
+ off      | off          | x            | off        |    | off
+ off      | off          | x            | on         |    | on
+ x        | on           | x            | off        |    | on
+ x        | on           | x            | on         |    | off
+ on       | off          | off          | off        |    | off
+ on       | off          | off          | on         |    | on
+ on       | x            | on           | off        |    | on
+ on       | x            | on           | on         |    | off
+
+_Ignition_|_MarkerLights_|__HeadLights__|__RightTurn__| == |__RightTurnMarker__
+----------|--------------|--------------|-------------|----|-------------------
+ off      | off          | x            | off         |    | off
+ off      | off          | x            | on          |    | on
+ x        | on           | x            | off         |    | on
+ x        | on           | x            | on          |    | off
+ on       | off          | off          | off         |    | off
+ on       | off          | off          | on          |    | on
+ on       | x            | on           | off         |    | on
+ on       | x            | on           | on          |    | off
+
+_Door_|_InteriorLight_|_Ignition_| == |__InteriorLight__
+------|---------------|----------|----|------------------
+ x    | on            | x        |    | on
+ on   | x             | x        |    | on
+ off  | off           | on       |    | off
+ off  | off           | off      |    | see (1)
+
+(1) While _InteriorLight_ and _Ignition_ are off, when _Door_ transitions from on to off __InteriorLights__ will remain on for _InteriorLightTime_.
+
+_Ignition_|_Start_|_WiperHigh_|_WiperLow_| == |__WiperHigh__|__WiperLow__
+----------|-------|-----------|----------|----|-------------|------------
+ off      | x     | x         | x        |    | off         | off
+ on       | on    | x         | x        |    | off         | off
+ on       | off   | off       | off      |    | off         | see (1)
+ on       | off   | on        | x        |    | on          | off
+ on       | off   | off       | on       |    | off         | on
+
+The _WiperInt_ input simulates switching _WiperLow_ on briefly every _WiperInterval_ if both _WiperLow_ and _WiperHigh_ are off.
+
+_Ignition_|_Start_|_LightsUp_|_HeadLights_|__HeadLights__| == |__LightsDown__|__LightsUp__
+----------|-------|----------|------------|--------------|----|--------------|------------
+ off      | x     | off      | off        | x            |    | on           | off
+ off      | x     | on       | x          | x            |    | off          | on
+ off      | x     | x        | on         | x            |    | off          | off
+ on       | on    | x        | x          | x            |    | off          | off
+ on       | off   | on       | x          | x            |    | off          | on
+ on       | off   | off      | x          | off          |    | on           | off
+ on       | off   | off      | x          | on           |    | off          | on
+ 
+_Ignition_|_Start_| == |__Start__
+----------|-------|----|---------
+ off      | x     |    | off
+ on       | off   |    | off
+ on       | on    |    | on
+
+_Ignition_|_Start_|_HeadLights_|_HighBeam_|Toggle(1)| == |__HeadLights__|__LowBeam__|__HighBeam__
+----------|-------|------------|----------|---------|----|--------------|-----------|-------------
+ off      | x     | x          | x        | x       |    | off          | off       | off
+ on       | on    | x          | x        | x       |    | off          | off       | off
+ on       | off   | off        | off      | x       |    | off          | off       | off
+ on       | off   | on         | off      | 0       |    | on           | on        | off
+ on       | off   | on         | off      | 1       |    | on           | of        | on
+ on       | off   | x          | on       | x       |    | on           | off       | on
+
+(1) Toggle is set to 0 when ignition is turned on, and swaps between 0 and 1 each time the _HighBeamToggle_ input turns on.
+
+_Ignition_|_Start_|_FogLights_|__HeadLights__| == |__FogLights__
+----------|-------|-----------|--------------|----|-------------
+ off      | x     | x         | x            |    | off          
+ on       | on    | x         | x            |    | off          
+ on       | off   | off       | x            |    | off          
+ on       | off   | on        | off          |    | off
+ on       | off   | on        | on           |    | on           
+
+_Ignition_|_Brake_| == |__Brake__
+----------|-------|----|---------
+ off      | x     |    | off
+ on       | off   |    | off
+ on       | on    |    | on
+
+_Ignition_|_Reverse_| == |__Reverse__
+----------|---------|----|-----------
+ off      | x       |    | off
+ on       | off     |    | off
+ on       | on      |    | on
+

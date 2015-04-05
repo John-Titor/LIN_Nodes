@@ -52,6 +52,8 @@ public:
         _count(0)
     {}
     bool        state() const { return _state; }
+    bool        active() const { return _active; }
+
     void        start()
     {
         _state = true;
@@ -75,10 +77,10 @@ public:
 
 private:
     volatile bool       _state: 1;
-    volatile bool       _active: 1;
-    volatile uint8_t    _count;
+        volatile bool       _active: 1;
+        volatile uint8_t    _count;
 
-    static void blink(void *arg)
+        static void blink(void *arg)
     {
         auto b = reinterpret_cast<TurnBlinker *>(arg);
         b->_blink();
@@ -143,13 +145,14 @@ class StayAwakeTimer : public Decrementer
 public:
     StayAwakeTimer() : Decrementer(kStayAwakeTime) {}
 
-    void                reset() { set_milliseconds(kStayAwakeTime); }
+    void        reset() { set_milliseconds(kStayAwakeTime); }
 
 private:
     static const Timer::Timeval kStayAwakeTime = 20000U;
 };
 
-static TurnBlinker      turnBlinker;
+static TurnBlinker      turnLeftBlinker;
+static TurnBlinker      turnRightBlinker;
 static StayAwakeTimer   awakeDelay;
 static WiperDelay       wiperDelay;
 static Decrementer      interiorLightsDelay;
@@ -170,121 +173,84 @@ powerSignals(Response &resp)
 }
 
 static void
-markerLights(Response &resp)
-{
-    // markers and city lights?
-    if (Switches::test(input_assignment::kMarkerLights)) {
-
-        awakeDelay.reset();                     // markers are on, stay awake
-
-        resp.Relays.MarkerLights = 1;
-
-        // Note: overridden by turnSignals below
-        resp.Relays.LeftTurnMarker = 1;
-        resp.Relays.RightTurnMarker = 1;
-    }
-}
-
-static void
 turnSignals(Response &resp)
 {
-    // Note: if turnBlinker is disabled (period is zero) then
-    // we assume that there is an external flasher in use, and
-    // the switches will come and go under its control.
-
-    // external blinker mode?
+    // If TurnBlinkPeriod is zero then we assume that there
+    // is an external flasher in use, and the inputs will come and
+    // go under its control.
+    //
     if (Parameter(kParamTurnBlinkPeriod).get() == 0) {
 
         if (Switches::test(input_assignment::kLeftTurn)) {
             resp.Relays.LeftTurn = 1;
-            resp.Relays.LeftTurnMarker = 0;
         }
 
         if (Switches::test(input_assignment::kRightTurn)) {
             resp.Relays.RightTurn = 1;
-            resp.Relays.RightTurnMarker = 0;
         }
 
         return;
     }
 
-    // smart hazard warning lights?
-    if (Switches::test(input_assignment::kHazard)) {
+    // Smart blinker mode
+    //
 
-        awakeDelay.reset();                     // hazards are on, stay awake
+    if (Switches::changed_to_on(input_assignment::kHazard)) {
+        // hazard warning just turned on, (re)start both signals
+        turnLeftBlinker.start();
+        turnRightBlinker.start();
 
-        // start the blinker
-        if (Switches::changed(input_assignment::kHazard)) {
-            turnBlinker.start();
-        }
+    } else if (Switches::changed_to_off(input_assignment::kHazard)) {
+        // hazard warning just turned off, cancel both signals
+        turnLeftBlinker.cancel();
+        turnRightBlinker.cancel();
 
-        // both signals track the blinker
-        if (turnBlinker.state()) {
-            resp.Relays.LeftTurn = 1;
-            resp.Relays.RightTurn = 1;
-        }
+    } else if (!Switches::test(input_assignment::kHazard)) {
+        // hazard warning off, signals only work if ignition is on
+        if (Switches::test(input_assignment::kIgnition)) {
 
-        return;
+            if (Switches::test(input_assignment::kLeftTurn) && !turnLeftBlinker.active()) {
+                // left turn is requested but not yet active (either just changed or hazard warning turned off)
+                turnLeftBlinker.start();
+                turnRightBlinker.cancel();
 
-    } else {
-
-        // hazard blinker just turned off?
-        if (Switches::changed(input_assignment::kHazard)) {
-            turnBlinker.cancel();
-        }
-
-        // XXX this isn't quite right; if a smart turn signal was engaged while
-        //     hazards were on, we will miss it...
-    }
-
-    // parking markers?
-    if (!Switches::test(input_assignment::kIgnition)) {
-
-        // parking lights - no blink
-        if (Switches::test(input_assignment::kLeftTurn)) {
-            awakeDelay.reset();                     // parking markers are on, stay awake
-            resp.Relays.LeftTurn = 1;
-        }
-
-        if (Switches::test(input_assignment::kRightTurn)) {
-            awakeDelay.reset();                     // parking markers are on, stay awake
-            resp.Relays.RightTurn = 1;
-        }
-
-        return;
-    }
-
-    // smart turn signals?
-    if (Switches::test(input_assignment::kIgnition)) {
-        static bool blinkLeft;
-
-        // cancel/restart blinker
-        if (Switches::changed_to_on(input_assignment::kLeftTurn)) {
-            turnBlinker.start();
-            blinkLeft = true;
-        }
-
-        if (Switches::changed_to_on(input_assignment::kRightTurn)) {
-            turnBlinker.start();
-            blinkLeft = false;
-        }
-
-        // stop blinker
-        if (Switches::changed_to_off(input_assignment::kLeftTurn) ||
-            Switches::changed_to_off(input_assignment::kRightTurn)) {
-            turnBlinker.stop();
-        }
-
-        // signals on to suit
-        if (turnBlinker.state()) {
-            if (blinkLeft) {
-                resp.Relays.LeftTurn = 1;
-                resp.Relays.RightTurn = 0;
+            } else if (Switches::test(input_assignment::kRightTurn) && !turnRightBlinker.active()) {
+                // right turn is requested but not yet active (either just changed or hazard warning turned off)
+                turnLeftBlinker.cancel();
+                turnRightBlinker.start();
 
             } else {
-                resp.Relays.RightTurn = 1;
-                resp.Relays.LeftTurn = 0;
+                // stop signals - may run on if the minimum blink count has not completed
+                turnLeftBlinker.stop();
+                turnRightBlinker.stop();
             }
+
+        } else {
+            // ignition is off, signals should be off
+            turnLeftBlinker.cancel();
+            turnRightBlinker.cancel();
+        }
+    }
+
+    // left turn signal on?
+    if (turnLeftBlinker.state()) {
+        resp.Relays.LeftTurn = 1;
+    }
+
+    // right turn signal on?
+    if (turnRightBlinker.state()) {
+        resp.Relays.RightTurn = 1;
+    }
+
+    // parking markers disabled if ignition or hazard warning are on
+    if (!Switches::test(input_assignment::kIgnition) &&
+        !Switches::test(input_assignment::kHazard)) {
+
+        if (Switches::test(input_assignment::kLeftTurn)) {
+            resp.Relays.LeftTurn = 1;
+
+        } else if (Switches::test(input_assignment::kRightTurn)) {
+            resp.Relays.RightTurn = 1;
         }
     }
 }
@@ -294,51 +260,30 @@ headLights(Response &resp)
 {
     static bool highBeamToggle;
 
-    // lights up if forced
-    if (Switches::test(input_assignment::kLightsUp)) {
-        resp.Relays.LightsUp = 1;
-
-        // otherwise lights down if nothing is on
-
-    } else if (!Switches::test(input_assignment::kMarkerLights) &&
-               !Switches::test(input_assignment::kHeadLights) &&
-               !Switches::test(input_assignment::kHighBeam)) {
-
-        // Note that it's correct to de-assert LightsDown (but not assert
-        // LightsUp) with marker lights on; this allows a mode where the lights
-        // are up but not lit for e.g. cleaning purposes.
-        resp.Relays.LightsDown = 1;
-    }
-
-    // force lights up for test/maintenance
-
-    // no headlights without ignition
-    if (!Switches::test(input_assignment::kIgnition)) {
-        return;
-    }
-
     // clear the highbeam toggle when ignition turns on
     if (Switches::changed(input_assignment::kIgnition)) {
         highBeamToggle = false;
     }
 
-    // handle the high-beam toggle input
-    if (Switches::changed_to_on(input_assignment::kHighBeamToggle)) {
-        highBeamToggle = !highBeamToggle;
-    }
+    // no headlights without ignition, or when starting
 
-    // test for any headlight on
-    if (Switches::test(input_assignment::kHeadLights) ||
-        Switches::test(input_assignment::kHighBeam)) {
+    if (Switches::test(input_assignment::kIgnition) &&
+        !Switches::test(input_assignment::kStart)) {
 
-        // headlights and markers on and popups up
-        resp.Relays.HeadLights = 1;
-        resp.Relays.MarkerLights = 1;
-        resp.Relays.LightsUp = 1;
-        resp.Relays.LightsDown = 0;         // for safety
+        // handle the high-beam toggle input
+        if (Switches::changed_to_on(input_assignment::kHighBeamToggle)) {
+            highBeamToggle = !highBeamToggle;
+        }
 
-        // test for high beam; headlights off while starting
-        if (!Switches::test(input_assignment::kStart)) {
+        // test for any headlight on
+        if (Switches::test(input_assignment::kHeadLights) ||
+            Switches::test(input_assignment::kHighBeam)) {
+
+            // headlights and markers on
+            resp.Relays.HeadLights = 1;
+            resp.Relays.MarkerLights = 1;
+
+            // test for high beam
             if (Switches::test(input_assignment::kHighBeam) ||
                 highBeamToggle) {
                 resp.Relays.HighBeam = 1;
@@ -346,27 +291,22 @@ headLights(Response &resp)
             } else {
                 resp.Relays.LowBeam = 1;
             }
-        }
-    }
 
-    // foglights
-    // XXX require other lights?
-    if (Switches::test(input_assignment::kFogLight)) {
-        resp.Relays.FogLights = 1;
+            // foglights
+            if (Switches::test(input_assignment::kFogLight)) {
+                resp.Relays.FogLights = 1;
+            }
+        }
     }
 }
 
 static void
 tailLights(Response &resp)
 {
-    resp.Relays.Brake = 0;
-    resp.Relays.Reverse = 0;
-
     if (Switches::test(input_assignment::kIgnition)) {
 
         // brake lights
         if (Switches::test(input_assignment::kBrake)) {
-
             resp.Relays.Brake = 1;
         }
 
@@ -500,6 +440,52 @@ windowWipers(Response &resp)
     }
 }
 
+static void
+markerLights(Response &resp)
+{
+
+    // marker lights on if switched directly or headlights on
+    if (Switches::test(input_assignment::kMarkerLights) ||
+        (Switches::test(input_assignment::kIgnition) && resp.Relays.HeadLights)) {
+        resp.Relays.MarkerLights = 1;
+    }
+
+    // turn markers are markers xor corresponding turn signal
+    resp.Relays.LeftTurnMarker = resp.Relays.MarkerLights ^ resp.Relays.LeftTurn;
+    resp.Relays.RightTurnMarker = resp.Relays.MarkerLights ^ resp.Relays.RightTurn;
+
+}
+
+static void
+popupLights(Response &resp)
+{
+
+    // suppress headlight movement while starting
+    if (!Switches::test(input_assignment::kStart)) {
+        // lights up if ignition is on and either explicit lights up request or
+        // lights are on
+        if (Switches::test(input_assignment::kIgnition) &&
+            (Switches::test(input_assignment::kLightsUp) || resp.Relays.HeadLights)) {
+            resp.Relays.LightsUp = 1;
+
+        } else {
+
+            // lights down if ignition is on and neither explicit request nor headlights on
+            if (Switches::test(input_assignment::kIgnition) &&
+                !Switches::test(input_assignment::kLightsUp) &&
+                !resp.Relays.HeadLights) {
+                resp.Relays.LightsDown = 1;
+            }
+
+            // lights down if ignition is off and headlight switch is off
+            if (!Switches::test(input_assignment::kIgnition) &&
+                !Switches::test(input_assignment::kHeadLights)) {
+                resp.Relays.LightsDown = 1;
+            }
+        }
+    }
+}
+
 void
 tick()
 {
@@ -507,6 +493,7 @@ tick()
     // - ignition is on
     // - hazard warning signals are on
     // - left or right parking markers are on
+    // - marker lights are on
     // - doors are open
     // - remote lock/unlock signal changed
     //
@@ -514,6 +501,7 @@ tick()
         Switches::test(input_assignment::kHazard) ||
         Switches::test(input_assignment::kLeftTurn) ||
         Switches::test(input_assignment::kRightTurn) ||
+        Switches::test(input_assignment::kMarkerLights) ||
         Switches::test(input_assignment::kDoor) ||
         Switches::changed(input_assignment::kDoorUnlock)) {
 
@@ -533,7 +521,6 @@ tick()
 
     // order here is important
     powerSignals(f);
-    markerLights(f);
     turnSignals(f);
     headLights(f);
     tailLights(f);
@@ -541,6 +528,10 @@ tick()
     pathLights(f);
     climateControl(f);
     windowWipers(f);
+
+    // outputs with dependencies on earlier outputs
+    markerLights(f);
+    popupLights(f);
 
     // atomically update the copy we are sending to nodes
     cli();
