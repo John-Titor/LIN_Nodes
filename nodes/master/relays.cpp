@@ -39,6 +39,15 @@
 
 using namespace Master;
 
+// Convenience macros
+
+#define PARAMETER(_x)               Parameter(kParam##_x).get()
+#define SWITCH(_x)                  Switches::test(input_assignment::k##_x)
+#define SWITCH_CHANGED_TO_ON(_x)    Switches::changed_to_on(input_assignment::k##_x)
+#define SWITCH_CHANGED_TO_OFF(_x)   Switches::changed_to_off(input_assignment::k##_x)
+#define SWITCH_CHANGED(_x)          Switches::changed(input_assignment::k##_x)
+#define RELAY(_x)                   resp.Relays._x
+
 namespace Relays
 {
 
@@ -58,8 +67,8 @@ public:
     {
         _state = true;
         _active = true;
-        _count = Parameter(kParamPassingBlinkCount).get();
-        _remaining = _interval = Parameter(kParamTurnBlinkPeriod).get();
+        _count = PARAMETER(PassingBlinkCount);
+        _remaining = _interval = PARAMETER(TurnBlinkPeriod);
     }
     void        stop()
     {
@@ -128,7 +137,7 @@ private:
     {
         if (_state) {
             // wiper control signal off for the specified interval
-            _remaining = Parameter(kParamWiperInterval).get();
+            _remaining = PARAMETER(WiperInterval);
             _state = false;
 
         } else {
@@ -158,18 +167,30 @@ static WiperDelay       wiperDelay;
 static Decrementer      interiorLightsDelay;
 static Decrementer      pathwayLightingDelay;
 
-static void
-powerSignals(Response &resp)
-{
-    // ignition on?
-    if (Switches::test(input_assignment::kIgnition)) {
-        resp.Relays.Ignition = 1;
 
-        // start switch on?
-        if (Switches::test(input_assignment::kStart)) {
-            resp.Relays.Start = 1;
-        }
+static void
+headLights(Response &resp)
+{
+    static bool highBeamToggle;
+
+    // clear the highbeam toggle when ignition turns on
+    if (SWITCH_CHANGED(Ignition)) {
+        highBeamToggle = false;
     }
+
+    // toggle high beams if ignition is on and toggle is on
+    if (SWITCH(Ignition) && SWITCH_CHANGED_TO_ON(HighBeamToggle)) {
+        highBeamToggle = !highBeamToggle;
+    }
+
+    // Headlights
+    // Feature #127
+    //
+    RELAY(HeadLights) = RELAY(Ignition) && (SWITCH(HeadLights) || SWITCH(HighBeam)) && !RELAY(Start);
+    RELAY(LowBeam) = RELAY(Ignition) && !RELAY(Start) && SWITCH(HeadLights) && !SWITCH(HighBeam) && !highBeamToggle;
+                     RELAY(HighBeam) = (RELAY(Ignition) && !RELAY(Start) && SWITCH(HighBeam)) ||
+                                       (RELAY(Ignition) && !RELAY(Start) && SWITCH(HeadLights) && highBeamToggle);
+    RELAY(FogLights) = RELAY(Ignition) && !RELAY(Start) && RELAY(HeadLights) && SWITCH(FogLight);
 }
 
 static void
@@ -179,183 +200,93 @@ turnSignals(Response &resp)
     // is an external flasher in use, and the inputs will come and
     // go under its control.
     //
-    if (Parameter(kParamTurnBlinkPeriod).get() == 0) {
+    if (PARAMETER(TurnBlinkPeriod) == 0) {
 
-        if (Switches::test(input_assignment::kLeftTurn)) {
-            resp.Relays.LeftTurn = 1;
+        if (SWITCH(LeftTurn)) {
+            RELAY(LeftTurn) = 1;
         }
 
-        if (Switches::test(input_assignment::kRightTurn)) {
-            resp.Relays.RightTurn = 1;
+        if (SWITCH(RightTurn)) {
+            RELAY(RightTurn) = 1;
         }
 
         return;
     }
 
-    // Smart blinker mode
+    // Turn signals
+    // Feature #125
     //
 
-    if (Switches::changed_to_on(input_assignment::kHazard)) {
-        // hazard warning just turned on, (re)start both signals
-        turnLeftBlinker.start();
-        turnRightBlinker.start();
-
-    } else if (Switches::changed_to_off(input_assignment::kHazard)) {
+    if (SWITCH_CHANGED_TO_OFF(Hazard)) {
         // hazard warning just turned off, cancel both signals
         turnLeftBlinker.cancel();
         turnRightBlinker.cancel();
 
-    } else if (!Switches::test(input_assignment::kHazard)) {
-        // hazard warning off, signals only work if ignition is on
-        if (Switches::test(input_assignment::kIgnition)) {
-
-            if (Switches::test(input_assignment::kLeftTurn) && !turnLeftBlinker.active()) {
-                // left turn is requested but not yet active (either just changed or hazard warning turned off)
-                turnLeftBlinker.start();
-                turnRightBlinker.cancel();
-
-            } else if (Switches::test(input_assignment::kRightTurn) && !turnRightBlinker.active()) {
-                // right turn is requested but not yet active (either just changed or hazard warning turned off)
-                turnLeftBlinker.cancel();
-                turnRightBlinker.start();
-
-            } else {
-                // stop signals - may run on if the minimum blink count has not completed
-                turnLeftBlinker.stop();
-                turnRightBlinker.stop();
-            }
-
-        } else {
-            // ignition is off, signals should be off
-            turnLeftBlinker.cancel();
-            turnRightBlinker.cancel();
-        }
     }
 
-    // left turn signal on?
-    if (turnLeftBlinker.state()) {
-        resp.Relays.LeftTurn = 1;
+    if (!RELAY(Ignition) && !SWITCH(Hazard)) {
+        // ignition is off and no hazard warning
+        turnLeftBlinker.cancel();
+        turnRightBlinker.cancel();
+
     }
 
-    // right turn signal on?
-    if (turnRightBlinker.state()) {
-        resp.Relays.RightTurn = 1;
+    if (!SWITCH(Hazard) && !SWITCH(LeftTurn)) {
+        // no hazard warning, left turn signal not on
+        turnLeftBlinker.stop();
     }
 
-    // parking markers disabled if ignition or hazard warning are on
-    if (!Switches::test(input_assignment::kIgnition) &&
-        !Switches::test(input_assignment::kHazard)) {
-
-        if (Switches::test(input_assignment::kLeftTurn)) {
-            resp.Relays.LeftTurn = 1;
-
-        } else if (Switches::test(input_assignment::kRightTurn)) {
-            resp.Relays.RightTurn = 1;
-        }
+    if (!SWITCH(Hazard) && !SWITCH(RightTurn)) {
+        // no hazard warning, right turn signal not on
+        turnRightBlinker.stop();
     }
+
+
+    if (SWITCH_CHANGED_TO_ON(Hazard)) {
+        // hazard warning just turned on, (re)start both signals
+        turnLeftBlinker.start();
+        turnRightBlinker.start();
+
+    }
+
+    if (RELAY(Ignition) && !SWITCH(Hazard) && SWITCH(LeftTurn) && !turnLeftBlinker.active()) {
+        // left turn signal start
+        turnRightBlinker.cancel();
+        turnLeftBlinker.start();
+
+    }
+
+    if (RELAY(Ignition) && !SWITCH(Hazard) && SWITCH(RightTurn) && !turnRightBlinker.active()) {
+        // right turn signal start
+        turnLeftBlinker.cancel();
+        turnRightBlinker.start();
+    }
+
+
+    RELAY(LeftTurn) = (!RELAY(Ignition) && !SWITCH(Hazard) && SWITCH(LeftTurn)) ||
+                      (SWITCH(Hazard) && turnLeftBlinker.state()) ||
+                      (RELAY(Ignition) && turnLeftBlinker.state());
+    RELAY(LeftTurn) = (!RELAY(Ignition) && !SWITCH(Hazard) && SWITCH(LeftTurn)) ||
+                      (SWITCH(Hazard) && turnLeftBlinker.state()) ||
+                      (RELAY(Ignition) && turnLeftBlinker.state());
 }
 
 static void
-headLights(Response &resp)
+markerLights(Response &resp)
 {
-    static bool highBeamToggle;
 
-    // clear the highbeam toggle when ignition turns on
-    if (Switches::changed(input_assignment::kIgnition)) {
-        highBeamToggle = false;
-    }
+    // Marker lights and pathway lighting
+    // Feature #124, #106
+    //
 
-    // no headlights without ignition, or when starting
-
-    if (Switches::test(input_assignment::kIgnition) &&
-        !Switches::test(input_assignment::kStart)) {
-
-        // handle the high-beam toggle input
-        if (Switches::changed_to_on(input_assignment::kHighBeamToggle)) {
-            highBeamToggle = !highBeamToggle;
-        }
-
-        // test for any headlight on
-        if (Switches::test(input_assignment::kHeadLights) ||
-            Switches::test(input_assignment::kHighBeam)) {
-
-            // headlights and markers on
-            resp.Relays.HeadLights = 1;
-            resp.Relays.MarkerLights = 1;
-
-            // test for high beam
-            if (Switches::test(input_assignment::kHighBeam) ||
-                highBeamToggle) {
-                resp.Relays.HighBeam = 1;
-
-            } else {
-                resp.Relays.LowBeam = 1;
-            }
-
-            // foglights
-            if (Switches::test(input_assignment::kFogLight)) {
-                resp.Relays.FogLights = 1;
-            }
-        }
-    }
-}
-
-static void
-tailLights(Response &resp)
-{
-    if (Switches::test(input_assignment::kIgnition)) {
-
-        // brake lights
-        if (Switches::test(input_assignment::kBrake)) {
-            resp.Relays.Brake = 1;
-        }
-
-        // reverse lights
-        if (Switches::test(input_assignment::kReverse)) {
-            resp.Relays.Reverse = 1;
-        }
-    }
-}
-
-static void
-interiorLights(Response &resp)
-{
-    // door just closed - start interior lighting timer
-    if (Switches::changed_to_off(input_assignment::kDoor)) {
-        interiorLightsDelay.set_seconds(Parameter(kParamInteriorLightTime).get());
-    }
-
-    // if ignition is on, cancel interior light timer
-    if (Switches::test(input_assignment::kIgnition)) {
-        interiorLightsDelay.clear();
-    }
-
-    // interior light on?
-    if (Switches::test(input_assignment::kDoor) ||          // door open or
-        Switches::test(input_assignment::kInteriorLight) || // light switch on or
-        !interiorLightsDelay.expired()) {        // timer not expired
-
-        awakeDelay.reset();                     // lights are on, stay awake
-
-        resp.Relays.InteriorLight = 1;
-
-        // XXX nice to have a time limit on the interior light when
-        //     ignition is off to prevent battery drain
-    }
-}
-
-static void
-pathLights(Response &resp)
-{
     static bool ignitionWasOn;
 
     // detect ignition transition to off
-    if (Switches::changed_to_off(input_assignment::kIgnition)) {
+    if (SWITCH_CHANGED_TO_OFF(Ignition)) {
 
         // door already open?
-        if (Switches::test(input_assignment::kDoor)) {
-            // path lighting
-            pathwayLightingDelay.set_seconds(Parameter(kParamPathLightTime).get());
+        if (SWITCH(Door)) {
+            pathwayLightingDelay.set_seconds(PARAMETER(PathLightTime));
 
         } else {
             ignitionWasOn = true;
@@ -363,11 +294,10 @@ pathLights(Response &resp)
     }
 
     // door opens after ignition off
-    if (Switches::changed_to_on(input_assignment::kDoor) &&
-        ignitionWasOn) {
+    if (SWITCH_CHANGED_TO_ON(Door) && ignitionWasOn) {
 
         // path lighting
-        pathwayLightingDelay.set_seconds(Parameter(kParamPathLightTime).get());
+        pathwayLightingDelay.set_seconds(PARAMETER(PathLightTime));
 
         // XXX no path lighting after a 'false alarm' door opening
         //     might want to keep this set until sleep?
@@ -375,167 +305,148 @@ pathLights(Response &resp)
     }
 
     // ignition off and alarm unlock changed?
-    if (!Switches::test(input_assignment::kIgnition) &&
-        Switches::changed(input_assignment::kDoorUnlock)) {
+    if (!RELAY(Ignition) && SWITCH_CHANGED(DoorUnlock)) {
 
         // welcome lighting
-        pathwayLightingDelay.set_seconds(Parameter(kParamWelcomeLightTime).get());
+        pathwayLightingDelay.set_seconds(PARAMETER(WelcomeLightTime));
     }
 
-    // path lights on?
-    if (!pathwayLightingDelay.expired()) {
-
-        awakeDelay.reset();                     // path lights are on, stay awake
-
-        resp.Relays.MarkerLights = 1;
-        // XXX other pathway lights? town lights?
+    // ignition on?
+    if (RELAY(Ignition)) {
+        pathwayLightingDelay.clear();
     }
-}
 
-static void
-climateControl(Response &resp)
-{
-    if (Switches::test(input_assignment::kIgnition) &&
-        !Switches::test(input_assignment::kStart)) {
-        if (Switches::test(input_assignment::kCabinFan1)) {
-            resp.Relays.CabinFan1 = 1;
-        }
+    RELAY(MarkerLights) = (!RELAY(Ignition) && !RELAY(HeadLights) && !pathwayLightingDelay.expired()) ||
+                          SWITCH(MarkerLights) ||
+                          (RELAY(Ignition) && RELAY(HeadLights));
+    RELAY(LeftTurnMarker) = RELAY(MarkerLights) ^ RELAY(LeftTurn);
+    RELAY(RightTurnMarker) = RELAY(MarkerLights) ^ RELAY(RightTurn);
 
-        if (Switches::test(input_assignment::kCabinFan2)) {
-            resp.Relays.CabinFan2 = 1;
-        }
-
-        if (Switches::test(input_assignment::kCabinFan3)) {
-            resp.Relays.CabinFan3 = 1;
-        }
-
-        if (Switches::test(input_assignment::kRearDefrost)) {
-            resp.Relays.RearDefrost = 1;
-        }
-    }
 }
 
 static void
 windowWipers(Response &resp)
 {
-    if (Switches::test(input_assignment::kIgnition) &&
-        !Switches::test(input_assignment::kStart)) {
-
-        // avoid issues with overlap between wiper switch settings
-        if (Switches::changed_to_on(input_assignment::kWiperInt)) {
-            wiperDelay.reset();
-        }
-
-        if (Switches::test(input_assignment::kWiperHigh)) {
-            resp.Relays.WiperHigh = 1;
-
-        } else if (Switches::test(input_assignment::kWiperLow)) {
-            resp.Relays.WiperLow = 1;
-
-        } else if (Switches::test(input_assignment::kWiperInt)) {
-            if (wiperDelay.state()) {
-                resp.Relays.WiperLow = 1;
-            }
-        }
+    // Window wipers
+    // Feature #111
+    //
+    if (SWITCH_CHANGED_TO_ON(WiperInt)) {
+        wiperDelay.reset();
     }
+
+    RELAY(WiperHigh) = RELAY(Ignition) && !RELAY(Start) && SWITCH(WiperHigh);
+    RELAY(WiperLow) = RELAY(Ignition) &&
+                      (SWITCH(WiperLow) || wiperDelay.state()) &&
+                      !RELAY(WiperHigh) &&
+                      !RELAY(Start);
 }
 
 static void
-markerLights(Response &resp)
+interiorLights(Response &resp)
 {
+    // Interior lights
+    // Feature #107
+    //
 
-    // marker lights on if switched directly or headlights on
-    if (Switches::test(input_assignment::kMarkerLights) ||
-        (Switches::test(input_assignment::kIgnition) && resp.Relays.HeadLights)) {
-        resp.Relays.MarkerLights = 1;
+    // door just closed - start interior lighting timer
+    if (SWITCH_CHANGED_TO_OFF(Door)) {
+        interiorLightsDelay.set_seconds(PARAMETER(InteriorLightTime));
     }
 
-    // turn markers are markers xor corresponding turn signal
-    resp.Relays.LeftTurnMarker = resp.Relays.MarkerLights ^ resp.Relays.LeftTurn;
-    resp.Relays.RightTurnMarker = resp.Relays.MarkerLights ^ resp.Relays.RightTurn;
-
-}
-
-static void
-popupLights(Response &resp)
-{
-
-    // suppress headlight movement while starting
-    if (!Switches::test(input_assignment::kStart)) {
-        // lights up if ignition is on and either explicit lights up request or
-        // lights are on
-        if (Switches::test(input_assignment::kIgnition) &&
-            (Switches::test(input_assignment::kLightsUp) || resp.Relays.HeadLights)) {
-            resp.Relays.LightsUp = 1;
-
-        } else {
-
-            // lights down if ignition is on and neither explicit request nor headlights on
-            if (Switches::test(input_assignment::kIgnition) &&
-                !Switches::test(input_assignment::kLightsUp) &&
-                !resp.Relays.HeadLights) {
-                resp.Relays.LightsDown = 1;
-            }
-
-            // lights down if ignition is off and headlight switch is off
-            if (!Switches::test(input_assignment::kIgnition) &&
-                !Switches::test(input_assignment::kHeadLights)) {
-                resp.Relays.LightsDown = 1;
-            }
-        }
+    // if ignition is on, cancel interior light timer
+    if (RELAY(Ignition)) {
+        interiorLightsDelay.clear();
     }
+
+    RELAY(InteriorLight) = !interiorLightsDelay.expired() ||
+                           SWITCH(InteriorLight) ||
+                           SWITCH(Door);
 }
 
 void
 tick()
 {
-    // Wake up and reset the awake timer if:
-    // - ignition is on
-    // - hazard warning signals are on
-    // - left or right parking markers are on
-    // - marker lights are on
-    // - doors are open
-    // - remote lock/unlock signal changed
+    // Stay awake if we have a reason for it
+    // Features #105, #108
     //
-    if (Switches::test(input_assignment::kIgnition) ||
-        Switches::test(input_assignment::kHazard) ||
-        Switches::test(input_assignment::kLeftTurn) ||
-        Switches::test(input_assignment::kRightTurn) ||
-        Switches::test(input_assignment::kMarkerLights) ||
-        Switches::test(input_assignment::kDoor) ||
-        Switches::changed(input_assignment::kDoorUnlock)) {
+    if (SWITCH(Ignition)                ||  // ignition is on
+        SWITCH(Hazard)                  ||  // hazard warning is on
+        SWITCH(MarkerLights)            ||  // marker lights are on
+        SWITCH(LeftTurn)                ||  // left parking markers are on
+        SWITCH(RightTurn)               ||  // right parking markers are on
+        SWITCH(Door)                    ||  // door is open
+        SWITCH(InteriorLight)           ||  // interior light is on
+        SWITCH_CHANGED(DoorUnlock)      ||  // doors locked/unlocked
+        !pathwayLightingDelay.expired() ||  // pathway lighting still on
+        // XXX TBD interior light timer (RELAY(InteriorLight)?)
+        0) {
 
         awakeDelay.reset();
         gMaster.set_sleep_enable(false);
+
+    } else {
+
+        // If the awake timer has expired, allow the master
+        // to sleep and do nothing more here.
+        // Feature #108
+        //
+        if (awakeDelay.expired()) {
+            gMaster.set_sleep_enable(true);
+            return;
+        }
     }
 
-    // If the awake timer has expired, allow the master
-    // to sleep and do nothing more here.
-    if (awakeDelay.expired()) {
-        gMaster.set_sleep_enable(true);
-        return;
-    }
+    // Update the relays frame by looking at switches
+    //
+    // Note that in the logic here, RELAY() values must not be used until they have
+    // been computed.
+    //
+    Response resp;
 
-    // update the relays frame by looking at switches
-    Response f;
+    // Power signals
+    // Feature #129
+    //
+    RELAY(Ignition) = SWITCH(Ignition);
+    RELAY(Start) = RELAY(Ignition) && SWITCH(Start);
 
-    // order here is important
-    powerSignals(f);
-    turnSignals(f);
-    headLights(f);
-    tailLights(f);
-    interiorLights(f);
-    pathLights(f);
-    climateControl(f);
-    windowWipers(f);
+    // Tail lights
+    // Feature #128
+    //
+    RELAY(Brake) = RELAY(Ignition) && SWITCH(Brake);
+    RELAY(Reverse) = RELAY(Ignition) && SWITCH(Reverse);
 
-    // outputs with dependencies on earlier outputs
-    markerLights(f);
-    popupLights(f);
+    // Headlights
+    //
+    headLights(resp);
+
+    // Turn signals
+    //
+    turnSignals(resp);
+
+    // Marker lights
+    //
+    markerLights(resp);
+
+    // Pop-up lights
+    // Feature #116
+    //
+    RELAY(LightsDown) = (!RELAY(Ignition) && !RELAY(Start) && !SWITCH(LightsUp) && !RELAY(HeadLights)) ||
+                        (RELAY(Ignition) && !RELAY(Start) && !SWITCH(LightsUp) && !RELAY(HeadLights));
+    RELAY(LightsUp) = (!RELAY(Start) && SWITCH(LightsUp)) ||
+                      (RELAY(Ignition) && !RELAY(Start) && RELAY(HeadLights));
+
+    // Window wipers
+    //
+    windowWipers(resp);
+
+    // Interior lights
+    //
+    interiorLights(resp);
+
 
     // atomically update the copy we are sending to nodes
     cli();
-    gMaster.relayFrame = f;
+    gMaster.relayFrame = resp;
     sei();
 
 }
