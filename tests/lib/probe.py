@@ -31,16 +31,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 import sys
 import os
 import subprocess
+import re
 
 class ProbeException(Exception):
     pass
 
 class node(object):
-    address = None
-
-    _probe = None
-    _function = None
-    _description = None
 
     def __init__(self, probe, address, function, description):
         self._probe = probe
@@ -67,9 +63,8 @@ class node(object):
 
 
 class probe(object): 
-    _toolpath = None
 
-    def __init__(self, toolpath):
+    def __init__(self, toolpath = "../build/lintool/lintool"):
         if not os.path.isfile(toolpath) or not os.access(toolpath, os.X_OK):
             raise ProbeException("tool not found at %s" % toolpath)
         self._toolpath = toolpath
@@ -91,7 +86,8 @@ class probe(object):
         nodes = list();
         lines = self._cmd(args)
         for line in lines:
-            info = re.search("\[(.*):(.*):(.*)\]")
-            nodes += node(self, int(info.group(1)), int(info.group(2)), info.group(3))
+            words = line.split("/")
+            if len(words) == 3:
+                nodes.append(node(self, words[0], words[1], words[2]))
 
         return nodes

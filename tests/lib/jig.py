@@ -54,37 +54,41 @@ def errorHandler(e):
         print("Phidget Exception %i: %s" % (e.code, e.details))
 
 class jig(object):
-    _mio = None
-    _relays = None
+
+    mio = None
+    relays = None
+
+    # Connect to the I/O board
+    try:
+        mio = InterfaceKit()
+        mio.setOnErrorhandler(errorHandler)
+        mio.openPhidget(MiscIOSerial)
+    except PhidgetException as e:
+        raise JigException("Phidget Exception %i connecting to MiscIO board: %s" % (e.code, e.details))
+
+    try:            
+        mio.waitForAttach(1000)
+    except PhidgetException as e:
+        raise JigException("Phidget Exception %i waiting for MiscIO board: %s" % (e.code, e.details))
+
+    # Connect to the relay board
+    try:
+        relays = InterfaceKit()
+        relays.setOnErrorhandler(errorHandler)
+        relays.openPhidget(RelaySerial)
+    except PhidgetException as e:
+        raise JigException("Phidget Exception %i connecting to Relay board: %s" % (e.code, e.details))
+
+    try:            
+        relays.waitForAttach(1000)
+    except PhidgetException as e:
+        raise JigException("Phidget Exception %i waiting for Relay board: %s" % (e.code, e.details))
+
 
     def __init__(self):
+        self.reset()
 
-        # Connect to the I/O board
-#        try:
-#            self._mio = InterfaceKit()
-#            self._mio.setOnErrorhandler(errorHandler)
-#            self._mio.openPhidget(MiscIOSerial)
-#        except PhidgetException as e:
-#            raise JigException("Phidget Exception %i connecting to MiscIO board: %s" % (e.code, e.details))
-#
-#        try:            
-#            self._mio.waitForAttach(1000)
-#        except PhidgetException as e:
-#            raise JigException("Phidget Exception %i waiting for MiscIO board: %s" % (e.code, e.details))
-
-        # Connect to the relay board
-        try:
-            self._relays = InterfaceKit()
-            self._relays.setOnErrorhandler(errorHandler)
-            self._relays.openPhidget(RelaySerial)
-        except PhidgetException as e:
-            raise JigException("Phidget Exception %i connecting to Relay board: %s" % (e.code, e.details))
-
-        try:            
-            self._relays.waitForAttach(1000)
-        except PhidgetException as e:
-            raise JigException("Phidget Exception %i waiting for Relay board: %s" % (e.code, e.details))
-
+    def __del__(self):
         self.reset()
 
     def reset(self):
@@ -105,7 +109,7 @@ class jig(object):
         if state not in [True, False]:
             raise JigException("invalid ignition-enable state %s" % mode)
 
-        self._relays.setOutputState(4, state)
+        jig.relays.setOutputState(4, state)
 
     def setPullToBatt(self, state):
         '''set the state of the PULL_TO_BATT / PULL_TO_NONE rail for the SP switches'''
@@ -113,11 +117,11 @@ class jig(object):
         if state not in [PULL_TO_BATTERY, PULL_TO_NONE]:
             raise JigException("invalid pull-to-battery state %s" % mode)
 
-        if self._mio is not None:
+        if jig.mio is not None:
             if state == PULL_TO_BATTERY:
-                self._mio.setOutputState(0, True)
+                jig.mio.setOutputState(0, True)
             else:
-                self._mio.setOutputState(0, False)
+                jig.mio.setOutputState(0, False)
 
     def setSP(self, index, mode):
         '''set the state of the SP1-3 input to the master'''
@@ -129,9 +133,9 @@ class jig(object):
 
         # actual state depends on setPullToBatt()
         if mode in (PULL_TO_BATTERY, PULL_TO_NONE):
-            self._relays.setOutputState(index + 4, True)
+            jig.relays.setOutputState(index + 4, True)
         else:
-            self._relays.setOutputState(index + 4, False)
+            jig.relays.setOutputState(index + 4, False)
 
     def setSG(self, index, mode):
         '''set the state of the SG0-3 input to the master'''
@@ -142,19 +146,19 @@ class jig(object):
             raise JigException("invalid SG input index %s" % index)
 
         if mode == PULL_TO_NONE:
-            self._relays.setOutputState(index, True)
+            jig.relays.setOutputState(index, True)
         elif mode == PULL_TO_GROUND:
-            self._relays.setOutputState(index, False)
+            jig.relays.setOutputState(index, False)
         else:
             raise JigException("PULL_TO_BATT not possible for SG0")
 
     @property
     def current():
         '''fetch the current sensor reading in Amperes'''
-        return (self._mio.getSensorValue(0) / 13.2) - 37.8787
+        return (jig.mio.getSensorValue(0) / 13.2) - 37.8787
 
     @property
     def voltage():
         '''fetch the voltage sensor reading in Volts'''
-        return ((self._mio.getSensorValue(1) / 200) - 2.5) / 0.0681
+        return ((jig.mio.getSensorValue(1) / 200) - 2.5) / 0.0681
 

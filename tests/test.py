@@ -33,14 +33,11 @@ import unittest
 from lib import jig, probe
 from tests import *
 
-j = jig.jig()
-p = probe.probe("../build/lintool/lintool")
-
 test_modules = [elt for elt in sys.modules.keys() if elt.startswith("tests.test_")]
 
-for mod in test_modules:
+for mod in sorted(test_modules):
     test = mod[6:]
-    print "### " + test
+    print "\n#####\n##### " + test + "\n#####\n"
     m = sys.modules[mod]
     suite = unittest.defaultTestLoader.loadTestsFromModule(m)
     unittest.TextTestRunner(verbosity=2).run(suite)
