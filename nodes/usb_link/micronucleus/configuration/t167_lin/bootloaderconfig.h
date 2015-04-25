@@ -226,7 +226,7 @@
 
 #define LED_DDR     DDRA
 #define LED_PORT    PORTA
-#define LED_PIN     PA6
+#define LED_PIN     PA3   // was PA6 on the one-off proto board
 
 /*
  *  This is the implementation of the LED code. Change the configuration above unless you want to 

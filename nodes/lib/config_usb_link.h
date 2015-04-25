@@ -28,12 +28,12 @@
 
 #pragma once
 
-// v1 usb link module using the v1 generic node board
+// v1 usb link module
 //
 
 #define pinLINRX        portA[0]
 #define pinLINTX        portA[1]
-#define pinLINCS        portA[6]
+#define pinLINCS        portA[3]    // was PA6 on the one-off proto board
 
 #define pinDebugTX      portA[7]
 
