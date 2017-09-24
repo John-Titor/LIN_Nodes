@@ -71,86 +71,81 @@ BLSlave::st_response_received(Response &resp)
     // reset some state
     _sendIndex = kNoSendResponse;
 
-    switch (current_FrameID()) {
-    case kFrameIDMasterRequest:
+    if ((current_FrameID() != kFrameIDMasterRequest) ||
+        (resp.MasterRequest.nad != nad())) {
+        return;
+    }
 
-        if (resp.MasterRequest.nad != nad()) {
-            break;
-        }
+    switch (resp.MasterRequest.sid) {
+    case service_id::kReadDataByID:
+        _sendIndex = resp.DataByID.index;
+        break;
 
-        switch (resp.MasterRequest.sid) {
-        case service_id::kReadDataByID:
-            _sendIndex = resp.DataByID.index;
-            break;
+    case service_id::kWriteDataByID:
+        switch (resp.DataByID.index) {
+        case Generic::kParamOperationMode:
 
-        case service_id::kWriteDataByID:
-            switch (resp.DataByID.index) {
-            case Generic::kParamOperationMode:
+            // reset the bootloader state
+            if (resp.DataByID.value == operation_magic::kBootloader) {
+                _pageStatus = bl_status::kWaitingForProgrammer;
+                _programEnd = 0;
+                _resetVector = 0;
 
-                // reset the bootloader state
-                if (resp.DataByID.value == operation_magic::kBootloader) {
-                    _pageStatus = bl_status::kWaitingForProgrammer;
-                    _programEnd = 0;
-                    _resetVector = 0;
-
-                } else if (resp.DataByID.value == operation_magic::kProgram) {
-                    // reboot (may just come right back...)
-                    Board::reset();
-                }
-
-                break;
-
-            case Bootloader::kParamPageAddress:
-                set_page_address(resp.DataByID.value);
-                break;
-
-            case Bootloader::kParamPageCRC:
-
-                // pad the buffer out with 0xff
-                while (add_page_byte(0xff)) {
-                }
-
-                // if the CRC matches, program the page
-                if (resp.DataByID.value == _runningCrc) {
-                    program_page();
-                    _pageStatus = bl_status::kReadyForPage;
-
-                } else {
-                    _pageStatus = bl_status::kPageCRCError;
-                }
-
-                break;
-
-            case Bootloader::kParamDebugPointer:
-                _memoryPointer = resp.DataByID.value;
-                break;
-
-            case Parameter::configBase ... Parameter::configTop:
-                eeprom_update_word((uint16_t *)((_sendIndex - Parameter::configBase) * 2), resp.DataByID.value);
-                break;
-
+            } else if (resp.DataByID.value == operation_magic::kProgram) {
+                // reboot (may just come right back...)
+                Board::reset();
             }
 
             break;
 
-        case service_id::kDataDump:
+        case Bootloader::kParamPageAddress:
+            set_page_address(resp.DataByID.value);
+            break;
 
-            // add bytes to the page buffer
-            if (_pageStatus == bl_status::kPageInProgress) {
-                uint8_t count = resp.MasterRequest.length - 1;
-                uint8_t field = 3;
+        case Bootloader::kParamPageCRC:
 
-                while (count--) {
-                    add_page_byte(resp._bytes[field++]);
-                }
+            // pad the buffer out with 0xff
+            while (add_page_byte(0xff)) {
+            }
+
+            // if the CRC matches, program the page
+            if (resp.DataByID.value == _runningCrc) {
+                program_page();
+                _pageStatus = bl_status::kReadyForPage;
+
+            } else {
+                _pageStatus = bl_status::kPageCRCError;
             }
 
             break;
 
-        default:
+        case Bootloader::kParamDebugPointer:
+            _memoryPointer = resp.DataByID.value;
             break;
+
+        case Parameter::configBase ... Parameter::configTop:
+            eeprom_update_word((uint16_t *)((_sendIndex - Parameter::configBase) * 2), resp.DataByID.value);
+            break;
+
         }
 
+        break;
+
+    case service_id::kDataDump:
+
+        // add bytes to the page buffer
+        if (_pageStatus == bl_status::kPageInProgress) {
+            uint8_t count = resp.MasterRequest.length - 1;
+            uint8_t field = 3;
+
+            while (count--) {
+                add_page_byte(resp._bytes[field++]);
+            }
+        }
+
+        break;
+
+    default:
         break;
     }
 }

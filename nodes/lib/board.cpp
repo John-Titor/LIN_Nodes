@@ -82,6 +82,11 @@ early_init()
 void
 panic(uint8_t code)
 {
+#if defined (BOARD_BOOTLOADER)
+    for (;;) {
+        // wait for the watchdog
+    }
+#else
     debug("panic %3u @ %p", code, __builtin_return_address(0));
 
     // disable interrupts and wait for possible pending LIN transmit to
@@ -109,6 +114,7 @@ panic(uint8_t code)
             ms_delay(200);
         }
     }
+#endif
 }
 
 uint8_t
