@@ -1,16 +1,24 @@
 #
 # Top-level makefile
 #
-# At this level, we perform a completely clean build.
-#
 
 TOPDIR		:= $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 BUILDDIR	:= $(TOPDIR)/build
 
-.PHONY: release
-release:
+.PHONY: build
+build:
+	make -C common
+	make -C nodes
+	make -C lintool
+
+.PHONY: clean
+clean:
 	rm -rf $(BUILDDIR)
-	cd common && ./ncf_parser nodes.ncf
+
+.PHONY: release
+release: clean
+	rm -rf $(BUILDDIR)
+	make -C common
 	make -C nodes
 	make -C lintool	
 
