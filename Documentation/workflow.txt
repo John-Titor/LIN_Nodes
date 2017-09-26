@@ -1,0 +1,11 @@
+How things work in this sourcebase.
+
+Prefer building at the top level, to get all depdenencies built correctly. Use 'build' and 'clean'.
+
+Use the 'program' toplevel target when a probe is attached to reprogram all nodes on the network.
+
+'lintool' prints lots of help; 'lintool update' is how to flash things.
+
+'mkfw' generates a firmware bundle for the usb_link updater.py script.
+
+

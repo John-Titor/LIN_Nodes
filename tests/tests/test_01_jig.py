@@ -2,7 +2,8 @@
 import unittest
 from lib import jig, probe
 
-class TestOne(unittest.TestCase):
+class Test(unittest.TestCase):
+    '''Test that we can interact with the jig'''
 
     _jig = None
     _probe = None

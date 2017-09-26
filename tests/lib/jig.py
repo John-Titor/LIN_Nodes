@@ -38,10 +38,10 @@ PULL_TO_NONE = 3
 
 import sys
 
-from Phidgets.PhidgetException import PhidgetErrorCodes, PhidgetException
-from Phidgets.Events.Events import AttachEventArgs, DetachEventArgs, ErrorEventArgs, InputChangeEventArgs, OutputChangeEventArgs, SensorChangeEventArgs
-from Phidgets.Devices.InterfaceKit import InterfaceKit
-from Phidgets.Phidget import PhidgetLogLevel
+from Phidget22.PhidgetException import *
+from Phidget22.Phidget import *
+
+from Phidget22.Devices.DigitalOutput import *
 
 class JigException(Exception):
     pass
@@ -49,7 +49,7 @@ class JigException(Exception):
 def errorHandler(e):
     try:
         source = e.device
-        print("InterfaceKit %i: Phidget Error %i: %s" % (source.getSerialNum(), e.eCode, e.description))
+        print("Interface %i: Phidget Error %i: %s" % (source.getSerialNum(), e.eCode, e.description))
     except PhidgetException as e:
         print("Phidget Exception %i: %s" % (e.code, e.details))
 
@@ -60,9 +60,10 @@ class jig(object):
 
     # Connect to the I/O board
     try:
-        mio = InterfaceKit()
+        mio = DigitalOutput()
         mio.setOnErrorhandler(errorHandler)
-        mio.openPhidget(MiscIOSerial)
+        mio.setDeviceSerialNumber(MiscIOSerial)
+        mio.open()
     except PhidgetException as e:
         raise JigException("Phidget Exception %i connecting to MiscIO board: %s" % (e.code, e.details))
 

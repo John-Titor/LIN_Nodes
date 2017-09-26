@@ -36,6 +36,9 @@ import re
 class ProbeException(Exception):
     pass
 
+class NodeException(Exception):
+    pass
+
 class node(object):
 
     def __init__(self, probe, address, function, description):
@@ -44,14 +47,15 @@ class node(object):
         self._function = function
         self._description = description
 
-    def _node_cmd(verb, args):
-        return self._probe.node_cmd(self, verb, args)
+    def _node_cmd(self, verb, args):
+        return self._probe.node_cmd(self, [verb, "-n", self.address] + args)
 
     def reset_to_defaults(self):
         self._node_cmd("load_params", ["-d"])
 
     def get_param(self, param_name):
         value = self._node_cmd("param", [param_name])
+        print value
         info = value.split()
         if len(info) == 5:
             return info[4]  # return encoded value
@@ -71,12 +75,15 @@ class probe(object):
 
     def _cmd(self, args):
         '''return the result of invoking the tool with the supplied arguments as a list of lines'''
+        if not isinstance(args, list):
+            raise RuntimeError("args not list")
+        str_args = [str(elt) for elt in args]
+        result = subprocess.check_output([self._toolpath] + str_args)
 
-        result = subprocess.check_output([self._toolpath] + args)
         return result.split("\n")
 
-    def node_cmd(self, node, verb, args = []):
-        return _cmd([verb, "-n", str(node.address)] + args)
+    def node_cmd(self, node, args = []):
+        return self._cmd(args)
 
     def scan(self, node_address = None):
         args = ["scan"]
@@ -89,5 +96,12 @@ class probe(object):
             words = line.split("/")
             if len(words) == 3:
                 nodes.append(node(self, words[0], words[1], words[2]))
+
+        if node_address is not None:
+            if len(nodes) > 1:
+                raise ProbeException("too many nodes returned scanning for an individual")
+            if len(nodes) == 0:
+                raise ProbeException("node not found")
+            return nodes[0]
 
         return nodes
