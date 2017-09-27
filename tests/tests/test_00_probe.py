@@ -1,12 +1,11 @@
 
 import unittest
-from lib import jig, probe
+from lib import probe
 
 class Test(unittest.TestCase):
     '''Test basic USB to LIN connectivity'''
 
     def setUp(self):
-        self._jig = jig.jig()
         self._probe = probe.probe()
         self._master = self._probe.scan(1)
 

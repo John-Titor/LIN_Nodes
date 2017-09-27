@@ -36,130 +36,162 @@ PULL_TO_GROUND = 1
 PULL_TO_BATTERY = 2
 PULL_TO_NONE = 3
 
-import sys
+import time
 
 from Phidget22.PhidgetException import *
 from Phidget22.Phidget import *
+from Phidget22.Unit import *
+from Phidget22.VoltageSensorType import *
+from Phidget22.VoltageRatioSensorType import *
 
 from Phidget22.Devices.DigitalOutput import *
+from Phidget22.Devices.VoltageInput import *
+from Phidget22.Devices.VoltageRatioInput import *
 
 class JigException(Exception):
     pass
 
-def errorHandler(e):
-    try:
-        source = e.device
-        print("Interface %i: Phidget Error %i: %s" % (source.getSerialNum(), e.eCode, e.description))
-    except PhidgetException as e:
-        print("Phidget Exception %i: %s" % (e.code, e.details))
+class jigOutput(object):
+    '''generic digital output on the jig'''
 
-class jig(object):
+    def __init__(self, provider, channel, defaultState):
+        self._defaultState = defaultState
+        self.do = DigitalOutput()
+        self.do.setDeviceSerialNumber(provider)
+        self.do.setChannel(channel)
+        self.do.setOnAttachHandler(self._attached)
+        self.do.openWaitForAttachment(1000)
 
-    mio = None
-    relays = None
+    def _attached(self, event):
+        self.set(self._defaultState)
 
-    # Connect to the I/O board
-    try:
-        mio = DigitalOutput()
-        mio.setOnErrorhandler(errorHandler)
-        mio.setDeviceSerialNumber(MiscIOSerial)
-        mio.open()
-    except PhidgetException as e:
-        raise JigException("Phidget Exception %i connecting to MiscIO board: %s" % (e.code, e.details))
+    @property
+    def state(self):
+        return self.do.getState()
 
-    try:            
-        mio.waitForAttach(1000)
-    except PhidgetException as e:
-        raise JigException("Phidget Exception %i waiting for MiscIO board: %s" % (e.code, e.details))
-
-    # Connect to the relay board
-    try:
-        relays = InterfaceKit()
-        relays.setOnErrorhandler(errorHandler)
-        relays.openPhidget(RelaySerial)
-    except PhidgetException as e:
-        raise JigException("Phidget Exception %i connecting to Relay board: %s" % (e.code, e.details))
-
-    try:            
-        relays.waitForAttach(1000)
-    except PhidgetException as e:
-        raise JigException("Phidget Exception %i waiting for Relay board: %s" % (e.code, e.details))
-
-
-    def __init__(self):
-        self.reset()
-
-    def __del__(self):
-        self.reset()
+    def set(self, state):
+        self.do.setState(state)
 
     def reset(self):
-        '''pull all switch inputs to ground, turn off ignition and pull-to-battery'''
-        self.setIgnition(False)
-        self.setPullToBatt(PULL_TO_NONE)
-        self.setSP(1, PULL_TO_GROUND)
-        self.setSP(2, PULL_TO_GROUND)
-        self.setSP(3, PULL_TO_GROUND)
-        self.setSG(0, PULL_TO_GROUND)
-        self.setSG(1, PULL_TO_GROUND)
-        self.setSG(2, PULL_TO_GROUND)
-        self.setSG(3, PULL_TO_GROUND)
+        self.set(self._defaultState)
 
-    def setIgnition(self, state):
-        '''enable or disable the ignition switch input to the master'''
 
-        if state not in [True, False]:
-            raise JigException("invalid ignition-enable state %s" % mode)
-
-        jig.relays.setOutputState(4, state)
-
-    def setPullToBatt(self, state):
-        '''set the state of the PULL_TO_BATT / PULL_TO_NONE rail for the SP switches'''
-
-        if state not in [PULL_TO_BATTERY, PULL_TO_NONE]:
-            raise JigException("invalid pull-to-battery state %s" % mode)
-
-        if jig.mio is not None:
-            if state == PULL_TO_BATTERY:
-                jig.mio.setOutputState(0, True)
-            else:
-                jig.mio.setOutputState(0, False)
-
-    def setSP(self, index, mode):
-        '''set the state of the SP1-3 input to the master'''
-
-        if mode not in [PULL_TO_GROUND, PULL_TO_NONE, PULL_TO_BATTERY]:
-            raise JigException("invalid SP pull mode %s" % mode)
-        if index not in range(1, 4):
-            raise JigException("invalid SP input index %s" % index)
-
-        # actual state depends on setPullToBatt()
-        if mode in (PULL_TO_BATTERY, PULL_TO_NONE):
-            jig.relays.setOutputState(index + 4, True)
-        else:
-            jig.relays.setOutputState(index + 4, False)
-
-    def setSG(self, index, mode):
-        '''set the state of the SG0-3 input to the master'''
-
-        if mode not in [PULL_TO_GROUND, PULL_TO_NONE]:
-            raise JigException("invalid SG pull mode %s" % mode)
-        if index not in range(0, 4):
-            raise JigException("invalid SG input index %s" % index)
-
-        if mode == PULL_TO_NONE:
-            jig.relays.setOutputState(index, True)
-        elif mode == PULL_TO_GROUND:
-            jig.relays.setOutputState(index, False)
-        else:
-            raise JigException("PULL_TO_BATT not possible for SG0")
+class jigSGOutput(jigOutput):
 
     @property
-    def current():
-        '''fetch the current sensor reading in Amperes'''
-        return (jig.mio.getSensorValue(0) / 13.2) - 37.8787
+    def state(self):
+        if self.do.getState():
+            return PULL_TO_NONE
+        else:
+            return PULL_TO_GROUND
+
+    def set(self, state):
+        if state == PULL_TO_GROUND:
+            self.do.setState(0)
+        elif state == PULL_TO_NONE:
+            self.do.setState(1)
+        else:
+            raise JigException("invalid SG input state {}".format(state))
+
+class jigSPOutput(jigOutput):
 
     @property
-    def voltage():
-        '''fetch the voltage sensor reading in Volts'''
-        return ((jig.mio.getSensorValue(1) / 200) - 2.5) / 0.0681
+    def state(self):
+        relayState = self.do.getState()
+        if relayState == 0:
+            return PULL_TO_GROUND
+        elif PullToBattery.state:
+            return PULL_TO_BATTERY
+        else:
+            return PULL_TO_NONE
 
+    def set(self, state):
+        if state == PULL_TO_GROUND:
+            self.do.setState(0)
+        elif state == PULL_TO_NONE:
+            if PullToBattery.state:
+                raise JigException("cannot pull SP input to NONE with PullToBattery set")
+            self.do.setState(1)
+        elif state == PULL_TO_BATTERY:
+            if not PullToBattery.state:
+                raise JigException("cannot pull SP input to BATTERY with PullToBattery not set")
+            self.do.setState(1)
+        else:
+            raise JigException("invalid SP input state {}".format(state))
+
+
+class jigVoltage(object):
+    '''voltage sensor'''
+
+    def __init__(self, provider, channel):
+        self.ai = VoltageInput()
+        self.ai.setDeviceSerialNumber(provider)
+        self.ai.setChannel(channel)
+        self.ai.setOnAttachHandler(self._attached)
+        self.ai.openWaitForAttachment(1000)
+
+    def _attached(self, event):
+        self.ai.setSensorType(VoltageSensorType.SENSOR_TYPE_1135)
+        self.ai.setDataInterval(100)
+        self.ai.setVoltageChangeTrigger(0)
+
+    @property
+    def voltage(self):
+        return self.ai.getSensorValue()
+
+    @property
+    def unitInfo(self):
+        return self.ai.getSensorUnit()
+
+
+class jigCurrent(object):
+    '''current sensor'''
+
+    def __init__(self, provider, channel):
+        self.ai = VoltageRatioInput()
+        self.ai.setDeviceSerialNumber(provider)
+        self.ai.setChannel(channel)
+        self.ai.setOnAttachHandler(self._attached)
+        self.ai.openWaitForAttachment(1000)
+
+    def _attached(self, event):
+        self.ai.setSensorType(VoltageRatioSensorType.SENSOR_TYPE_1122_DC)
+        self.ai.setDataInterval(100)
+        self.ai.setVoltageRatioChangeTrigger(0)
+
+    @property
+    def current(self):
+        return self.ai.getSensorValue()
+
+    @property
+    def unitInfo(self):
+        return self.ai.getSensorUnit()
+
+SG0 = jigSGOutput(RelaySerial, 0, PULL_TO_GROUND)
+SG1 = jigSGOutput(RelaySerial, 1, PULL_TO_GROUND)
+SG2 = jigSGOutput(RelaySerial, 2, PULL_TO_GROUND)
+SG3 = jigSGOutput(RelaySerial, 3, PULL_TO_GROUND)
+SP1 = jigSPOutput(RelaySerial, 5, PULL_TO_GROUND)
+SP2 = jigSPOutput(RelaySerial, 6, PULL_TO_GROUND)
+SP3 = jigSPOutput(RelaySerial, 7, PULL_TO_GROUND)
+
+Ignition = jigOutput(RelaySerial, 4, 0)
+PullToBattery = jigOutput(MiscIOSerial, 0, 0)
+
+Current = jigCurrent(MiscIOSerial, 0)
+Voltage = jigVoltage(MiscIOSerial, 1)
+
+# phidget22 bug requires sleep before trying to read values
+# https://www.phidgets.com/phorum/viewtopic.php?t=8300
+time.sleep(0.5)
+
+def reset():
+    SG0.reset()
+    SG1.reset()
+    SG2.reset()
+    SG3.reset()
+    SP1.reset()
+    SP2.reset()
+    SP3.reset()
+    Ignition.reset()
+    PullToBattery.reset()
