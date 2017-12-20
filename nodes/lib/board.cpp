@@ -177,15 +177,14 @@ sleep()
 
     // Put the board to sleep.
     //
+    pinLINTX.set();         // make sure TX is 1
+    pinLINCS.clear();       // make sure CS is 0
+    pinLINCS.cfg_output();  // make sure CS is an output (will be low now)
+    pinLINTX.cfg_output();  // make sure TX is an output (will be high now)
+    pinLINTX.clear();       // drive TX low to turn off power
     for (;;) {
-        pinLINTX.set();         // make sure TX is 1
-        pinLINCS.clear();       // make sure CS is 0
-        pinLINCS.cfg_output();  // make sure CS is an output (will be low now)
-        pinLINTX.cfg_output();  // make sure TX is an output (will be high now)
-        pinLINTX.clear();       // drive TX low to turn off power
-        ms_delay(10);
-        // if we failed to go to sleep, the watchdog will pull us
-        // back out via the reset path
+        // If we fail to power down, e.g. because LIN traffic causes the regulator to stay on,
+        // the watchdog will pull us back out via the reset path after ~500ms.
     }
 }
 
