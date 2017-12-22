@@ -36,6 +36,7 @@ LIN_language_version = "2.1";
 //
 node Generic {
     general {
+        LIN_protocol_version = "2.1";
         supplier = 0xb007;
         function = 0x0000;
         variant = 0x00;

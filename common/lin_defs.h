@@ -572,6 +572,7 @@ namespace Generic
     static const uint16_t kNodeSupplier = 0xb007;
     static const uint16_t kNodeFunction = 0x0000;
     static const uint8_t kNodeVariant = 0x00;
+    static const uint16_t kNodeProtocolVersion = ((uint16_t)2 << 8) | 1;
 } // namespace Generic
 
 namespace Bootloader
