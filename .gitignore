@@ -1,5 +1,7 @@
 build
 Nodes.sublime-workspace
+common/lin_defs.cpp
+common/lin_defs.h
 Documentation/parameters.numbers/preview-micro.jpg
 Documentation/parameters.numbers/preview-web.jpg
 Documentation/parameters.numbers/preview.jpg

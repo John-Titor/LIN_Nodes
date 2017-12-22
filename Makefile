@@ -14,6 +14,7 @@ build:
 .PHONY: clean
 clean:
 	rm -rf $(BUILDDIR)
+	rm -f common/lin_defs.cpp common/lin_defs.h
 
 .PHONY: release
 release: clean
