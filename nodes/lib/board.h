@@ -70,20 +70,21 @@ enum PanicCode : uint8_t {
 enum EEPROMInfo : uint16_t {
     kInfoPage           = FLASHEND - (SPM_PAGESIZE - 1),
 
-    kInfoProgramCRC     = kInfoPage + 0,
-    kInfoResetVector    = kInfoPage + 2,
-    kInfoProgramEnd     = kInfoPage + 4,
+    kInfoProgramCRC     = kInfoPage + 0,    // CRC of program, used by bootloader
+    kInfoResetVector    = kInfoPage + 2,    // program entrypoint, used by bootloader
+    kInfoProgramEnd     = kInfoPage + 4,    // end of program, used by bootloader
 
-    kConfigOptions      = (E2END - 4),
-    kConfigNodeAddress  = (E2END - 3),
-    kConfigFunction     = (E2END - 2),
-    kConfigMagic        = (E2END - 1),
+    kConfigOptions      = (E2END - 4),      // see EEPROMOptions below
+    kConfigNodeAddress  = (E2END - 3),      // LIN NAD for the node, must be legal for the loaded firmware, used by
+                                            // bootloader and firmwares supporting more than one address
+    kConfigFunction     = (E2END - 2),      // board function, must match the loaded firmware, used by bootloader
+    kConfigMagic        = (E2END - 1),      // if == kBLMagic, enter bootloader on reset
 
-    kBLMagic            = 0x4f42
+    kBLMagic            = 0x4f42            // AKA operation_magic::kEnterBootloader
 };
 
 enum EEPROMOptions : uint8_t {
-    kOptResetConfig     = (1 << 0)
+    kOptResetConfig     = (1 << 0)          // if set at startup, node firmware to reset configuration to defaults
 };
 
 /// Panic with a status code

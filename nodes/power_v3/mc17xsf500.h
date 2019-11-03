@@ -56,6 +56,7 @@ enum ControlRegister : uint8_t {
     kCtrlOLControl = 0xd0,
     kCtrlOLLEDControl = 0xd4,
     kCtrlIncrementDecrement = 0xe0,
+    kCtrlTestMode = 0xf0,
 
     kCtrlWDToggle = 0x08
 };
@@ -71,6 +72,7 @@ enum StatusRegister : uint8_t {
     kStatusDevice = 0x07,
     kStatusIO = 0x08,
     kDeviceID = 0x09,
+    kStatusTestMode = 0x0f
 };
 
 enum SyncEn : uint16_t {
@@ -256,7 +258,7 @@ enum OCStatus : uint16_t {
 
 enum DeviceType : uint16_t {
     kDTPenta32 = 0,
-    kDTPent05 = 1,
+    kDTPenta05 = 1,
     kDTQuad22 = 2,
     kDTQuad04 = 3,
     kDTTriple12 = 4,

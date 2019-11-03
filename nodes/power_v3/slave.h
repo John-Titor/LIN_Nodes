@@ -41,8 +41,6 @@ public:
         return (_relayFrame._raw >> (relay_id - 1)) & 1;
     }
 
-    static uint8_t  node_address(uint8_t boardID) { return PowerV3::kNodeAddress + boardID - 1; }
-
 protected:
     virtual void    st_header_received() override;
     virtual void    st_response_received(Response &frame) override;

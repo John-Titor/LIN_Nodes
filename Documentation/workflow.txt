@@ -9,3 +9,10 @@ Use the 'program' toplevel target when a probe is attached to reprogram all node
 'mkfw' generates a firmware bundle for the usb_link updater.py script.
 
 
+PowerV3 programming (THIS IS A BUG - address needs to be preserved either by programmer or firmware...)
+-------------------
+After a program / reset-to-defaults, the PowerV3 comes up at address 16, it needs to be reset to something sane with:
+
+  build/lintool/lintool param -n 16 NodeIndex <INDEX>
+
+where INDEX is the unit index in the range 1-14 inclusive.

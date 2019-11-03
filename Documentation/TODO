@@ -1,0 +1,7 @@
+TODO
+----
+
+- master node is dead with new firmware 
+- 'lintool scan' doesn't see PowerV3 nodes that were asleep
+- 'lintool param -a' sometimes fails with "ExLINError: persistent error in LIN data phase, status 35"
+- lintool / probe should be able to detect no bus pullup

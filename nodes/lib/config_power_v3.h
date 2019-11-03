@@ -29,13 +29,13 @@
 #pragma once
 
 //
-// v3.1 power node
+// v3.x. v4.s power nodes
 //
 
 #define pinMode1       portB[3]
-#define pinMode2       portB[5]
-#define pinMode4       portB[0]
-#define pinMode8       portB[4]
+//#define pinMode2       portB[5]
+//#define pinMode4       portB[0]
+//#define pinMode8       portB[4]
 
 #define pinLINRX       portA[0]
 #define pinLINTX       portA[1]

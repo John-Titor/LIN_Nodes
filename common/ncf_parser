@@ -1101,10 +1101,12 @@ namespace eval node {
             # emit basic node properties
             set properties [dict get $by_name $name properties]
             set node_address [dict get $properties node_address]
-            if {[llength $node_address] > 1} {
+            set num_addresses [llength $node_address]
+            if {$num_addresses > 1} {
                 set node_address [lindex $node_address 0]
             }
             puts $fh "    static const uint8_t kNodeAddress = ${node_address};"
+            puts $fh "    static const uint8_t kNumAddresses = ${num_addresses};"
             puts $fh "    static const uint16_t kNodeSupplier = [dict get ${properties} supplier];"
             puts $fh "    static const uint16_t kNodeFunction = [dict get ${properties} function];"
             puts $fh "    static const uint8_t kNodeVariant = [dict get ${properties} variant];"            

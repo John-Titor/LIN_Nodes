@@ -50,7 +50,7 @@ param_init()
     uint8_t options = eeprom_read_byte((uint8_t *)Board::kConfigOptions);
     bool should_default = (options & Board::kOptResetConfig);
 
-    // init parameters (set to defaults if requested or not valid
+    // init parameters (set to defaults if requested or not valid)
     for (Parameter::Address addr = Parameter::configBase; addr < Parameter::configTop; addr++) {
         Parameter p(addr);
         uint8_t encoding = param_encoding(addr);
@@ -74,20 +74,26 @@ get_assignment(uint8_t output)
     return Parameter(assign_base + output * channel_stride).get();
 }
 
+uint8_t
+get_nad()
+{
+    return PowerV3::kNodeAddress + Parameter(kParamNodeIndex).get();
+}
+
 void
 main(void)
 {
     Board::early_init();
-    uint8_t     id = Board::get_mode();
 
     // check for recovery mode before constructing anything else
-    if (id == 0) {
+    // v3.x boards, select ID 1, v4.x boards, pull PROG pad low.
+    if (Board::get_mode()) {
         Board::panic(Board::kPanicCodeRecovery);
     }
 
     // construct the slave
     param_init();
-    RelaySlave slave(id);
+    RelaySlave slave(get_nad());
     slave.init();
 
     // initialise the power switch
@@ -178,7 +184,7 @@ Parameter::set(uint16_t value) const
     case Generic::kParamOperationMode:
         switch (value) {
         case operation_magic::kEnterBootloader:
-            Board::enter_bootloader(RelaySlave::node_address(Board::get_mode()),
+            Board::enter_bootloader(get_nad(),
                                     board_function::kPowerV3);
 
         case operation_magic::kSetDefaults:

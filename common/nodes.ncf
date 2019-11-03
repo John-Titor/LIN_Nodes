@@ -420,7 +420,7 @@ node Master {
 node PowerV3 {
     general {
         supplier = 0xb007;
-        function = 0x0003;  // board_function::kPowerV1
+        function = 0x0003;  // board_function::kPowerV3
         variant = 0x01;
         bitrate = 19.2 kbps;
         sends_wake_up_signal = "no";
@@ -434,38 +434,39 @@ node PowerV3 {
         subscribe Relays {}
     }
     parameters {
-        DeviceStatus    { address = 0x0300; v3_device_status; }
-        CH1Status       {                   v3_output_status; }
-        CH1Current      {                   }
-        CH2Status       {                   v3_output_status; }
-        CH2Current      {                   }
-        CH3Status       {                   v3_output_status; }
-        CH3Current      {                   }
-        CH4Status       {                   v3_output_status; }
-        CH4Current      {                   }
-        CH5Status       {                   v3_output_status; }
-        CH5Current      {                   }
+        DeviceStatus    {                   address = 0x0300; v3_device_status; }
+        CH1Status       {                                     v3_output_status; }
+        CH1Current      {                                     v3_current_measure; }
+        CH2Status       {                                     v3_output_status; }
+        CH2Current      {                                     v3_current_measure; }
+        CH3Status       {                                     v3_output_status; }
+        CH3Current      {                                     v3_current_measure; }
+        CH4Status       {                                     v3_output_status; }
+        CH4Current      {                                     v3_current_measure; }
+        CH5Status       {                                     v3_output_status; }
+        CH5Current      {                                     v3_current_measure; }
 
-        Info0           {                   }
-        Info1           {                   }
-        Info2           {                   }
-        Info3           {                   }
-        Info4           {                   }
-        Info5           {                   }
-        Info6           {                   }
-        Info7           {                   }
+        Info0           {                                     }
+        Info1           {                                     }
+        Info2           {                                     }
+        Info3           {                                     }
+        Info4           {                                     }
+        Info5           {                                     }
+        Info6           {                                     }
+        Info7           {                                     }
 
-        CH1Type         { address = 0x0400; v3_output_type; }
-        CH2Type         {                   v3_output_type; }
-        CH3Type         {                   v3_output_type; }
-        CH4Type         {                   v3_output_type; }
-        CH5Type         {                   v3_output_type; }
+        NodeIndex       { init_value = 14;  address = 0x0400; v3_node_index; }
+        CH1Type         {                                     v3_output_type; }
+        CH2Type         {                                     v3_output_type; }
+        CH3Type         {                                     v3_output_type; }
+        CH4Type         {                                     v3_output_type; }
+        CH5Type         {                                     v3_output_type; }
 
-        CH1Assign       {                   v3_output_assignment; }
-        CH2Assign       {                   v3_output_assignment; }
-        CH3Assign       {                   v3_output_assignment; }
-        CH4Assign       {                   v3_output_assignment; }
-        CH5Assign       {                   v3_output_assignment; }
+        CH1Assign       {                                     v3_output_assignment; }
+        CH2Assign       {                                     v3_output_assignment; }
+        CH3Assign       {                                     v3_output_assignment; }
+        CH4Assign       {                                     v3_output_assignment; }
+        CH5Assign       {                                     v3_output_assignment; }
     }
     encoding {
         v3_device_status {
@@ -482,6 +483,12 @@ node PowerV3 {
             logical_value, 3, "TemperatureWarning";
             logical_value, 4, "TemperatureShutdown";
             logical_value, 5, "OverCurrent";
+        }
+        v3_current_measure {
+            physical_value, 0, 16000, 1, 0, "mA";
+        }
+        v3_node_index {
+            physical_value, 0, 14, 1, 0, "address";
         }
         v3_output_type {
             logical_value, 0, "5AGeneric";

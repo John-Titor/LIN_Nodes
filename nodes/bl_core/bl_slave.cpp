@@ -123,6 +123,10 @@ BLSlave::st_response_received(Response &resp)
             _memoryPointer = resp.DataByID.value;
             break;
 
+        case Bootloader::kParamEEPROM:
+            eeprom_update_byte((uint8_t *)_memoryPointer, resp.DataByID.value);
+            break;
+
         case Parameter::configBase ... Parameter::configTop:
             eeprom_update_word((uint16_t *)((_sendIndex - Parameter::configBase) * 2), resp.DataByID.value);
             break;

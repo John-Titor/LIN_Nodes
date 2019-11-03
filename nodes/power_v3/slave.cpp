@@ -31,8 +31,8 @@
 #include "slave.h"
 #include "board.h"
 
-RelaySlave::RelaySlave(uint8_t boardID) :
-    Slave(node_address(boardID))
+RelaySlave::RelaySlave(uint8_t nad) :
+    Slave(nad)
 {
 }
 
