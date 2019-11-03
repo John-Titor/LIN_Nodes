@@ -16,3 +16,4 @@ nodes/usb_link/lintool/lintool.dSYM/*
 *.map
 *.pyc
 nodes/usb_link/micronucleus/usbdrv/oddebug.c.lst
+.DS_Store
