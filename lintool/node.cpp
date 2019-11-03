@@ -53,8 +53,6 @@ static std::list<unsigned> knownAddresses = {
     PowerV3::kNodeAddress + 12,
     PowerV3::kNodeAddress + 13,
     PowerV3::kNodeAddress + 14, // XXX get this from PowerV3::kNumAddresses or generate a full list from the NCF
-    ECUBridge::kNodeAddress,
-    Dashboard::kNodeAddress,
     Bootloader::kNodeAddress
 };
 

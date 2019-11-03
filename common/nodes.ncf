@@ -138,8 +138,8 @@ node Generic {
             logical_value, 1, "Master";
             logical_value, 2, "PowerV1";
             logical_value, 3, "PowerV3";
-            logical_value, 4, "ECUBridge";
-            logical_value, 5, "Dashboard";
+            // 4
+            // 5
             logical_value, 6, "Tester";
             logical_value, 255, "Unconfigured";
         }
@@ -526,67 +526,6 @@ node PowerV3 {
             logical_value, 23, "RearDefrost";
         }
     }
-}
-
-node ECUBridge {
-    general {
-        supplier = 0xb007;
-        function = 0x0004;  // board_function::kECUBridge
-        variant = 0x10;
-        bitrate = 19.2 kbps;
-        sends_wake_up_signal = "no";
-    }
-    diagnostic {
-        NAD = 18;
-        diagnostic_class = 1;
-        support_sid { 0x22, 0x2e, 0xb2 };
-    }
-    frames {
-        publish ECUData {
-            length = 8;
-            min_period = 10 ms;
-            max_period = 100 ms;
-            frame_id = 0x02;
-            signals {
-                RPM                 { size = 8; offset = 0;  RPM; }
-                oilPressure         { size = 8; offset = 8;  PSI; }
-                oilTemperature      { size = 8; offset = 16; F; }
-                coolantTemperature  { size = 8; offset = 24; F; }
-                fuelPressure        { size = 8; offset = 32; PSI; }
-                voltage             { size = 8; offset = 40; V; }
-                AFR                 { size = 8; offset = 48; lambda; }
-                roadSpeed           { size = 8; offset = 56; MPH; }
-            }
-        }
-    }
-    encoding {
-        RPM     { physical_value, 0, 255, 30, 0, "RPM"; }
-        PSI     { physical_value, 0, 255, 1, 0, "PSI"; }
-        F       { physical_value, 0, 255, 1, 0, "Temperature"; }
-        V       { physical_value, 0, 255, 0.1, 0, "Volts"; }
-        lambda  { physical_value, 0, 255, 0.1, 0, "Lambda"; }
-        MPH     { physical_value, 0, 255, 1, 0, "MPH"; }
-    }   
-}
-
-node Dashboard {
-    general {
-        supplier = 0xb007;
-        function = 0x0005;  // board_function::kDashboard
-        variant = 0x01;
-        bitrate = 19.2 kbps;
-        sends_wake_up_signal = "no";
-    }
-    diagnostic {
-        NAD = 19;
-        diagnostic_class = 1;
-        support_sid { 0xb2 };
-    }
-    frames {
-        subscribe Relays {}
-        subscribe ECUData {}
-    }
-    encoding {}
 }
 
 node Tester {

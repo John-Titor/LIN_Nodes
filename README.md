@@ -7,9 +7,6 @@ boards/
 common/
     Protocol definitions and generator.
 
-dashboard/
-    Dashboard display using a 64x32 RGB LED panel driven by an NXP LPC1114.
-
 Documentation/
     Datasheets for various parts used in the design.
 
